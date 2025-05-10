@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react'; // Updated import
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,7 +40,7 @@ const initialState: SendEmailFormState = {
 };
 
 export function EmailForm() {
-  const [formState, dispatchSendEmailAction] = useFormState(sendEmailAction, initialState);
+  const [formState, dispatchSendEmailAction] = useActionState(sendEmailAction, initialState); // Updated hook
   const [isPending, startTransition] = React.useTransition();
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
