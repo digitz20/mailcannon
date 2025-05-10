@@ -1,7 +1,9 @@
+
 'use server';
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { saveCredentials } from './db'; // New import
 
 const emailSchema = z.object({
   recipients: z.string().min(1, 'Recipient emails are required.'),
@@ -56,7 +58,7 @@ export async function sendEmailAction(
   }
 
   // Placeholder for actual email sending logic
-  console.log('Sending email to:', recipientList);
+  console.log('Simulating email sending to:', recipientList);
   console.log('Subject:', subject);
   console.log('Body:', body);
   if (validatedFields.data.attachment) {
@@ -66,15 +68,30 @@ export async function sendEmailAction(
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Simulate potential error
+  // --- New MongoDB interaction: Save sender credentials ---
+  // These credentials would typically be used by the actual email sending service.
+  // Storing SENDER_PASSWORD in environment variables and then to a database is highly insecure.
+  // This is implemented based on the explicit request.
+  const senderEmail = process.env.SENDER_EMAIL;
+  const senderPassword = process.env.SENDER_PASSWORD; // VERY INSECURE PRACTICE
+
+  if (senderEmail) {
+    // The password field in saveCredentials is optional; it will be undefined if SENDER_PASSWORD is not set.
+    await saveCredentials(senderEmail, senderPassword);
+  } else {
+    console.warn("SENDER_EMAIL environment variable not set. Cannot save sender credentials to MongoDB.");
+  }
+  // --- End of New MongoDB interaction ---
+  
+  // Simulate potential error for email sending itself (unrelated to credential saving)
   // if (Math.random() > 0.8) {
   //   return {
   //     message: 'Failed to send email. Please try again.',
   //     success: false,
-  //     errors: { _form: ['An unexpected error occurred on the server.'] }
+  //     errors: { _form: ['An unexpected error occurred on the server while sending email.'] }
   //   };
   // }
 
   revalidatePath('/');
-  return { message: `Email successfully prepared for ${recipientList.length} recipients.`, success: true };
+  return { message: `Email successfully prepared for ${recipientList.length} recipients. Sender credentials (if configured) were processed.`, success: true };
 }
