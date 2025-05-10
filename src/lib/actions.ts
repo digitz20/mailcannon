@@ -44,7 +44,8 @@ export async function sendEmailAction(
   }
 
   const { recipients, subject, body } = validatedFields.data;
-  const recipientList = recipients.split(',').map(email => email.trim()).filter(Boolean);
+  // Split recipients by newline, then trim and filter out empty strings
+  const recipientList = recipients.split('\n').map(email => email.trim()).filter(Boolean);
 
   if (recipientList.length === 0) {
     return {

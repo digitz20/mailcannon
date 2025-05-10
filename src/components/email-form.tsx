@@ -122,13 +122,13 @@ export function EmailForm() {
                   <FormControl>
                     <Textarea
                       id="recipients"
-                      placeholder="user1@example.com, user2@example.com"
+                      placeholder={`user1@example.com\nuser2@example.com\nuser3@example.com`}
                       className="min-h-[80px]"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    Enter email addresses separated by commas.
+                    Enter email addresses, one per line.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
