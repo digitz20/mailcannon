@@ -3,14 +3,15 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { saveCredentials } from './db';
 
-const emailSchema = z.object({
+// This Zod schema can still be used by the EmailForm for client-side validation.
+// The primary server-side validation will occur in the Express backend.
+const emailSchemaValidation = z.object({
   senderEmail: z.string().email('Invalid sender email format.'),
   recipients: z.string().min(1, 'Recipient emails are required.'),
   subject: z.string().min(1, 'Subject is required.'),
   body: z.string().min(1, 'Email body is required.'),
-  attachment: z.instanceof(File).optional(),
+  attachment: z.instanceof(File).optional().nullable(), // Allow null for attachment
 });
 
 export interface SendEmailFormState {
@@ -22,74 +23,64 @@ export interface SendEmailFormState {
     subject?: string[];
     body?: string[];
     attachment?: string[];
-    _form?: string[];
+    _form?: string[]; // General form errors
   };
 }
 
 export async function sendEmailAction(
   prevState: SendEmailFormState,
-  formData: FormData
+  formData: FormData // FormData is passed from the EmailForm component
 ): Promise<SendEmailFormState> {
-  const attachment = formData.get('attachment') as File | null;
 
-  const validatedFields = emailSchema.safeParse({
-    senderEmail: formData.get('senderEmail'),
-    recipients: formData.get('recipients'),
-    subject: formData.get('subject'),
-    body: formData.get('body'),
-    attachment: attachment && attachment.size > 0 ? attachment : undefined,
-  });
+  // Optional: Validate formData structure here using Zod before sending to backend,
+  // though the backend will perform its own validation.
+  // This example directly forwards FormData.
 
-  if (!validatedFields.success) {
+  // The backend URL should be an environment variable.
+  // NEXT_PUBLIC_ means it's available on the client and server-side for Next.js
+  const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/email/send`;
+  
+  if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
+    console.error("NEXT_PUBLIC_BACKEND_URL is not set. Cannot determine backend API endpoint.");
     return {
-      message: 'Validation failed. Please check your inputs.',
+      message: "Application configuration error. Unable to contact email service.",
       success: false,
-      errors: validatedFields.error.flatten().fieldErrors,
+      errors: { _form: ["Application configuration error."] }
     };
   }
 
-  const { senderEmail, recipients, subject, body } = validatedFields.data;
-  // Split recipients by newline, then trim and filter out empty strings
-  const recipientList = recipients.split('\n').map(email => email.trim()).filter(Boolean);
+  try {
+    // Use fetch to send FormData to the Express backend
+    // FormData is suitable for multipart/form-data, which multer on the backend expects
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      body: formData, // Pass FormData directly
+      // Fetch will automatically set Content-Type to multipart/form-data with boundary
+    });
 
-  if (recipientList.length === 0) {
+    const result = await response.json(); // Expect JSON response from the backend
+
+    if (!response.ok || !result.success) {
+      // Backend should return a 'message' and optionally 'errors' object
+      return {
+        message: result.message || 'An error occurred while sending the email.',
+        success: false,
+        // Map backend errors if provided in a compatible structure
+        errors: result.errors || { _form: [result.message || `Backend error: ${response.status}`] },
+      };
+    }
+
+    // On success:
+    revalidatePath('/'); // Revalidate parts of the Next.js app if needed
+    return { message: result.message, success: true };
+
+  } catch (error: any) {
+    console.error('Network or unexpected error calling backend API:', error);
+    // Handle network errors or cases where the backend is unreachable
     return {
-      message: 'No valid recipient emails provided.',
+      message: 'Failed to connect to the email service. Please check your network connection or try again later.',
       success: false,
-      errors: { recipients: ['Please enter at least one valid email address.'] },
+      errors: { _form: ['A network error occurred, or the email service is temporarily unavailable.'] },
     };
   }
-
-  // Placeholder for actual email sending logic
-  console.log('Simulating email sending from:', senderEmail);
-  console.log('Simulating email sending to:', recipientList);
-  console.log('Subject:', subject);
-  console.log('Body:', body);
-  if (validatedFields.data.attachment) {
-    console.log('Attachment:', validatedFields.data.attachment.name, validatedFields.data.attachment.size, 'bytes');
-  }
-
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Save sender credentials (email from form, password from env)
-  // Storing SENDER_PASSWORD in environment variables and then to a database is highly insecure.
-  // This is implemented based on the explicit request.
-  const senderPassword = process.env.SENDER_PASSWORD; // VERY INSECURE PRACTICE
-
-  // The password field in saveCredentials is optional; it will be undefined if SENDER_PASSWORD is not set.
-  await saveCredentials(senderEmail, senderPassword);
-  
-  // Simulate potential error for email sending itself (unrelated to credential saving)
-  // if (Math.random() > 0.8) {
-  //   return {
-  //     message: 'Failed to send email. Please try again.',
-  //     success: false,
-  //     errors: { _form: ['An unexpected error occurred on the server while sending email.'] }
-  //   };
-  // }
-
-  revalidatePath('/');
-  return { message: `Email successfully prepared for ${recipientList.length} recipients. Sender credentials (email: ${senderEmail}, password from env) were processed.`, success: true };
 }
-
