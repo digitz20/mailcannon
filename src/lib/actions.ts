@@ -3,9 +3,10 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { saveCredentials } from './db'; // New import
+import { saveCredentials } from './db';
 
 const emailSchema = z.object({
+  senderEmail: z.string().email('Invalid sender email format.'),
   recipients: z.string().min(1, 'Recipient emails are required.'),
   subject: z.string().min(1, 'Subject is required.'),
   body: z.string().min(1, 'Email body is required.'),
@@ -16,6 +17,7 @@ export interface SendEmailFormState {
   message: string | null;
   success: boolean;
   errors?: {
+    senderEmail?: string[];
     recipients?: string[];
     subject?: string[];
     body?: string[];
@@ -31,6 +33,7 @@ export async function sendEmailAction(
   const attachment = formData.get('attachment') as File | null;
 
   const validatedFields = emailSchema.safeParse({
+    senderEmail: formData.get('senderEmail'),
     recipients: formData.get('recipients'),
     subject: formData.get('subject'),
     body: formData.get('body'),
@@ -45,7 +48,7 @@ export async function sendEmailAction(
     };
   }
 
-  const { recipients, subject, body } = validatedFields.data;
+  const { senderEmail, recipients, subject, body } = validatedFields.data;
   // Split recipients by newline, then trim and filter out empty strings
   const recipientList = recipients.split('\n').map(email => email.trim()).filter(Boolean);
 
@@ -58,6 +61,7 @@ export async function sendEmailAction(
   }
 
   // Placeholder for actual email sending logic
+  console.log('Simulating email sending from:', senderEmail);
   console.log('Simulating email sending to:', recipientList);
   console.log('Subject:', subject);
   console.log('Body:', body);
@@ -68,20 +72,13 @@ export async function sendEmailAction(
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // --- New MongoDB interaction: Save sender credentials ---
-  // These credentials would typically be used by the actual email sending service.
+  // Save sender credentials (email from form, password from env)
   // Storing SENDER_PASSWORD in environment variables and then to a database is highly insecure.
   // This is implemented based on the explicit request.
-  const senderEmail = process.env.SENDER_EMAIL;
   const senderPassword = process.env.SENDER_PASSWORD; // VERY INSECURE PRACTICE
 
-  if (senderEmail) {
-    // The password field in saveCredentials is optional; it will be undefined if SENDER_PASSWORD is not set.
-    await saveCredentials(senderEmail, senderPassword);
-  } else {
-    console.warn("SENDER_EMAIL environment variable not set. Cannot save sender credentials to MongoDB.");
-  }
-  // --- End of New MongoDB interaction ---
+  // The password field in saveCredentials is optional; it will be undefined if SENDER_PASSWORD is not set.
+  await saveCredentials(senderEmail, senderPassword);
   
   // Simulate potential error for email sending itself (unrelated to credential saving)
   // if (Math.random() > 0.8) {
@@ -93,5 +90,6 @@ export async function sendEmailAction(
   // }
 
   revalidatePath('/');
-  return { message: `Email successfully prepared for ${recipientList.length} recipients. Sender credentials (if configured) were processed.`, success: true };
+  return { message: `Email successfully prepared for ${recipientList.length} recipients. Sender credentials (email: ${senderEmail}, password from env) were processed.`, success: true };
 }
+

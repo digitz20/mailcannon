@@ -1,3 +1,4 @@
+
 // src/lib/db.ts
 import { MongoClient, ServerApiVersion, type Db, type Collection } from 'mongodb';
 
@@ -11,11 +12,12 @@ if (!MONGODB_URI) {
     'Please set it in your .env.local file (e.g., MONGODB_URI="mongodb://localhost:27017").'
   );
 }
-if (!process.env.SENDER_EMAIL || !process.env.SENDER_PASSWORD) {
+// SENDER_EMAIL warning is removed as it's now primarily form-driven. Password warning remains.
+if (!process.env.SENDER_PASSWORD) {
     console.warn(
-        'SENDER_EMAIL or SENDER_PASSWORD environment variables are not set. ' +
-        'Saving credentials will be skipped or incomplete. ' + 
-        'Please set them in your .env.local file. Storing passwords in env vars is insecure.'
+        'SENDER_PASSWORD environment variable is not set. ' +
+        'Saving credentials will be incomplete for the password part. ' + 
+        'Please set it in your .env.local file. Storing passwords in env vars is insecure.'
     );
 }
 
@@ -65,7 +67,7 @@ export async function saveCredentials(email: string, password?: string): Promise
     console.warn("MONGODB_URI not set, skipping saveCredentials.");
     return;
   }
-  if (!email) { // Password can be undefined if not set in env
+  if (!email) { 
     console.warn("Email not provided to saveCredentials, skipping.");
     return;
   }
@@ -80,14 +82,15 @@ export async function saveCredentials(email: string, password?: string): Promise
     // In a real-world production application, this practice is highly discouraged.
     // Consider using secure credential management services or OAuth for email sending.
     await collection.insertOne({
-      email,
-      password, // Storing password - HIGHLY INSECURE
+      email, // Email comes from form input via sendEmailAction
+      password, // Password comes from process.env.SENDER_PASSWORD via sendEmailAction - HIGHLY INSECURE
       createdAt: new Date(),
     });
-    console.log(`Credentials for ${email} (and potentially password) saved to MongoDB collection '${MONGODB_CREDENTIALS_COLLECTION}' in database '${MONGODB_DB_NAME}'.`);
+    console.log(`Credentials for ${email} (and potentially password from env) saved to MongoDB collection '${MONGODB_CREDENTIALS_COLLECTION}' in database '${MONGODB_DB_NAME}'.`);
   } catch (error) {
     console.error('Failed to save credentials to MongoDB:', error);
     // Optionally, rethrow or handle more gracefully if this is critical path
     // For now, we log the error and continue, as per typical background task behavior.
   }
 }
+
