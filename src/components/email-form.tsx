@@ -76,7 +76,6 @@ export function EmailForm() {
       }
     }
     if (formState.errors) {
-        // if (formState.errors.senderEmail) form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') }); // Removed senderEmail
         if (formState.errors.recipients) form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
         if (formState.errors.subject) form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
         if (formState.errors.body) form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
@@ -94,7 +93,6 @@ export function EmailForm() {
 
   const onSubmit = (values: EmailFormValues) => {
     const formData = new FormData();
-    // formData.append('senderEmail', values.senderEmail); // Removed senderEmail
     formData.append('recipients', values.recipients);
     formData.append('subject', values.subject);
     formData.append('body', values.body);
@@ -111,12 +109,15 @@ export function EmailForm() {
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl">Compose Email</CardTitle>
-        <CardDescription>Fill in the details below to send your email to multiple recipients. The sender's email is configured on the server.</CardDescription>
+        <CardDescription>
+          Fill in the details below to send your email to multiple recipients. The sender&apos;s email is configured on the server.
+          <br />
+          If you encounter sending errors, please ensure the server&apos;s email credentials (<code>NODEMAILER_USER</code>, <code>NODEMAILER_PASS</code> in <code>.env.local</code>) are correct and that the email provider allows access (e.g., for Gmail, use an &quot;App Password&quot; if 2-Step Verification is enabled).
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Sender's Email field removed */}
             
             <FormField
               control={form.control}
