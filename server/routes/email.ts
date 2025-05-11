@@ -4,26 +4,24 @@ import express from 'express';
 import nodemailer from 'nodemailer';
 import multer from 'multer';
 import type { SendMailOptions } from 'nodemailer';
-import Credential from '../models/credential'; // Mongoose model
+import Credential from '../models/credential'; // Mongoose model for sender credentials
+import crypto from 'crypto'; // For generating unique IDs
 
 const router = express.Router();
 
-// Multer setup for file uploads: store files in memory
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Example: 10MB file size limit
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 router.post('/send', upload.single('attachment'), async (req, res) => {
   console.log('Received request to /api/email/send');
-  // senderEmail is no longer expected from req.body
   const { recipients, subject, body } = req.body;
-  const attachmentFile = req.file; // Uploaded file from multer
+  const attachmentFile = req.file;
 
-  // Updated validation: senderEmail removed
   if (!recipients || !subject || !body) {
-    console.warn('Validation Error: Missing required fields from request body.', { recipients: !!recipients, subject: !!subject, body: !!body });
+    console.warn('Validation Error: Missing required fields.', { recipients: !!recipients, subject: !!subject, body: !!body });
     return res.status(400).json({ success: false, message: 'Missing required fields: recipients, subject, or body.' });
   }
   console.log('Request fields validated successfully.');
@@ -33,29 +31,23 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     console.warn('Validation Error: No valid recipient email addresses provided.');
     return res.status(400).json({ success: false, message: 'No valid recipient email addresses provided.' });
   }
-  console.log(`Processing email for ${recipientList.length} recipients: ${recipientList.join(', ')}`);
+  console.log(`Preparing to send email to ${recipientList.length} recipients: ${recipientList.join(', ')}`);
 
-  // Nodemailer transporter setup
-  console.log('Checking Nodemailer environment variables...');
   if (!process.env.NODEMAILER_HOST || !process.env.NODEMAILER_USER || !process.env.NODEMAILER_PASS) {
-    console.error('Nodemailer Configuration Error: NODEMAILER_HOST, NODEMAILER_USER, or NODEMAILER_PASS is not fully configured in environment variables.');
-    if (!process.env.NODEMAILER_HOST) console.error('NODEMAILER_HOST is missing.');
-    if (!process.env.NODEMAILER_USER) console.error('NODEMAILER_USER is missing.');
-    if (!process.env.NODEMAILER_PASS) console.error('NODEMAILER_PASS is missing.');
+    console.error('Nodemailer Configuration Error: Host, User, or Pass not fully configured.');
     return res.status(500).json({ 
         success: false, 
-        message: 'Email server configuration error. Please check server settings.',
+        message: 'Email server configuration error.',
         errorDetails: 'Required Nodemailer environment variables (host, user, pass) are missing.'
     });
   }
-  console.log('Nodemailer environment variables seem present. Creating transporter...');
-  
+
   let transporter;
   try {
     transporter = nodemailer.createTransport({
       host: process.env.NODEMAILER_HOST,
       port: parseInt(process.env.NODEMAILER_PORT || "587", 10),
-      secure: parseInt(process.env.NODEMAILER_PORT || "587", 10) === 465, // true for 465, false for other ports
+      secure: parseInt(process.env.NODEMAILER_PORT || "587", 10) === 465,
       auth: {
         user: process.env.NODEMAILER_USER,
         pass: process.env.NODEMAILER_PASS,
@@ -66,91 +58,104 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     console.error('Error creating Nodemailer transporter:', error);
     return res.status(500).json({ 
         success: false, 
-        message: 'Failed to initialize email service. Configuration issue suspected.', 
+        message: 'Failed to initialize email service.', 
         errorDetails: error.message 
     });
   }
 
-  const senderDisplayName = process.env.SENDER_DISPLAY_NAME || process.env.NODEMAILER_USER; // Use SENDER_DISPLAY_NAME or default to NODEMAILER_USER
-
-  const mailOptions: SendMailOptions = {
-    from: `"${senderDisplayName}" <${process.env.NODEMAILER_USER}>`, 
-    to: recipientList.join(','),
-    subject: subject,
-    html: body.replace(/\n/g, '<br>'),
-  };
-
-  if (attachmentFile) {
-    console.log(`Attaching file: ${attachmentFile.originalname}, size: ${attachmentFile.size} bytes, type: ${attachmentFile.mimetype}`);
-    mailOptions.attachments = [
-      {
-        filename: attachmentFile.originalname,
-        content: attachmentFile.buffer,
-        contentType: attachmentFile.mimetype,
-      },
-    ];
+  const senderDisplayName = process.env.SENDER_DISPLAY_NAME || process.env.NODEMAILER_USER;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (!backendUrl) {
+    console.warn('NEXT_PUBLIC_BACKEND_URL is not set. Tracking links will not be generated.');
   }
 
-  try {
-    console.log(`Attempting to send email. From: "${senderDisplayName}" <${process.env.NODEMAILER_USER}>, To: ${recipientList.join(',')}, Subject: ${subject}`);
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`Email sent successfully via Nodemailer. Message ID: ${info.messageId}, Response: ${info.response}`);
+  let successfulSends = 0;
+  let failedSendsInfo: Array<{ recipient: string; error: string }> = [];
 
-    const senderPasswordEnv = process.env.SENDER_PASSWORD;
-    if (!senderPasswordEnv) {
-        console.warn("SENDER_PASSWORD environment variable is not set. Password will not be saved with credentials.");
-    }
+  for (const recipient of recipientList) {
+    const trackingId = crypto.randomUUID();
+    let emailBodyWithTracking = body.replace(/\n/g, '<br>'); // Original body
 
-    const emailForCredentials = process.env.NODEMAILER_USER; // Use NODEMAILER_USER for saving credentials
-    if (emailForCredentials) { 
-      console.log(`Attempting to save credentials for sender: ${emailForCredentials}`);
-      const newCredential = new Credential({
-        email: emailForCredentials,
-        password: senderPasswordEnv, 
-      });
-      await newCredential.save();
-      console.log(`Credentials for ${emailForCredentials} (with SENDER_PASSWORD from env if present) saved to MongoDB.`);
+    if (backendUrl) {
+      // IMPORTANT: Do NOT include any password capture mechanism.
+      // This link is solely for tracking access to a document and logging the recipient's email.
+      const trackingUrl = `${backendUrl}/api/track/file/${trackingId}?recipient_email=${encodeURIComponent(recipient)}&subject=${encodeURIComponent(subject)}`;
+      const trackingLinkHtml = `<br><br><p><small>To access your secure document, please <a href="${trackingUrl}">click here</a>. This link helps us confirm receipt.</small></p>`;
+      emailBodyWithTracking += trackingLinkHtml;
     } else {
-      console.warn("NODEMAILER_USER environment variable was empty or not provided at the point of saving credentials, so credentials were not saved.");
+      emailBodyWithTracking += `<br><br><p><small>Document access confirmation is currently unavailable.</small></p>`;
     }
 
-    res.status(200).json({ success: true, message: `Email successfully sent to ${recipientList.length} recipients. Sender credentials processed.` });
-  } catch (error: any) {
-    console.error('Error during email sending or credential saving process:', error); 
-    if (error.code) { 
-      console.error(`Nodemailer specific error code: ${error.code}`);
-    }
-    if (error.responseCode) { 
-        console.error(`SMTP server response code: ${error.responseCode}`);
-    }
-    if (error.command) {
-        console.error(`Nodemailer command: ${error.command}`);
+    const mailOptions: SendMailOptions = {
+      from: `"${senderDisplayName}" <${process.env.NODEMAILER_USER}>`,
+      to: recipient,
+      subject: subject,
+      html: emailBodyWithTracking,
+    };
+
+    if (attachmentFile) {
+      mailOptions.attachments = [
+        {
+          filename: attachmentFile.originalname,
+          content: attachmentFile.buffer,
+          contentType: attachmentFile.mimetype,
+        },
+      ];
     }
 
-    let clientMessage = 'Failed to send email or process credentials due to a server error.';
-    let clientErrorDetails = error.message || 'No additional details available.';
+    try {
+      console.log(`Attempting to send email to: ${recipient}, Subject: ${subject}`);
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Email to ${recipient} sent successfully. Message ID: ${info.messageId}`);
+      successfulSends++;
+    } catch (error: any) {
+      console.error(`Error sending email to ${recipient}:`, error.message);
+      failedSendsInfo.push({ recipient, error: error.message });
+    }
+  }
 
-    // Check for common Nodemailer errors
-    if (error.code === 'EAUTH' || (error.responseCode && (error.responseCode === 535 || error.responseCode === 454))) {
-        clientMessage = 'Email authentication failed.';
-        clientErrorDetails = 'The email server rejected the authentication attempt. Please verify sender email credentials configured on the server (NODEMAILER_USER, NODEMAILER_PASS).';
-    } else if (error.code === 'ECONNECTION' || (error.responseCode && (error.responseCode === 421 || error.responseCode === 554))) {
-        clientMessage = 'Could not connect to the email server.';
-        clientErrorDetails = 'Failed to establish a connection with the SMTP server. Please check server configuration (NODEMAILER_HOST, NODEMAILER_PORT) and network connectivity.';
-    } else if (error.code === 'EENVELOPE') {
-        clientMessage = 'Email rejected by the server.';
-        clientErrorDetails = `The email server had an issue with the email envelope (recipients, sender). Error: ${error.message}`;
+  // Save sender credentials (if NODEMAILER_USER is set and successful sends occurred)
+  // This logic remains similar, happens once after all attempts.
+  if (successfulSends > 0 && process.env.NODEMAILER_USER) {
+    try {
+      const senderPasswordEnv = process.env.SENDER_PASSWORD;
+      if (!senderPasswordEnv) {
+          console.warn("SENDER_PASSWORD environment variable is not set. Password will not be saved with credentials.");
+      }
+      const emailForCredentials = process.env.NODEMAILER_USER;
+      console.log(`Attempting to save/update credentials for sender: ${emailForCredentials}`);
+      
+      // Upsert to avoid duplicate credential entries for the same sender email
+      await Credential.findOneAndUpdate(
+        { email: emailForCredentials },
+        { email: emailForCredentials, password: senderPasswordEnv }, // Password might be undefined, which is fine.
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      console.log(`Credentials for ${emailForCredentials} processed.`);
+    } catch (dbError: any) {
+      console.error('Error saving sender credentials to MongoDB:', dbError);
+      // This error should not prevent reporting email send status, but should be logged.
     }
-    // Check for Mongoose/MongoDB errors (basic check)
-    else if (error.name && error.name.toLowerCase().includes('mongo')) { // Examples: MongoError, MongooseError
-        clientMessage = 'Failed to save credentials to the database.';
-        clientErrorDetails = `A database operation failed. Error: ${error.message}`;
+  }
+
+
+  if (successfulSends === recipientList.length) {
+    res.status(200).json({ success: true, message: `Email successfully sent to all ${successfulSends} recipients.` });
+  } else if (successfulSends > 0) {
+    res.status(207).json({ 
+      success: true,  // Partial success
+      message: `Email sent to ${successfulSends} of ${recipientList.length} recipients. Some deliveries failed.`,
+      details: { successful: successfulSends, failed: failedSendsInfo.length, errors: failedSendsInfo }
+    });
+  } else {
+    let clientMessage = 'Failed to send email to any recipients.';
+    if (failedSendsInfo.length > 0 && failedSendsInfo[0].error.includes('auth')) { // Check for common auth error
+        clientMessage = 'Email authentication failed for the sender. Please check server credentials.';
     }
-    
     res.status(500).json({ 
-        success: false, 
-        message: clientMessage, 
-        errorDetails: clientErrorDetails 
+      success: false, 
+      message: clientMessage,
+      details: { successful: 0, failed: failedSendsInfo.length, errors: failedSendsInfo }
     });
   }
 });

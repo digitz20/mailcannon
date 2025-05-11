@@ -6,12 +6,12 @@ import { useActionState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Paperclip, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Loader2, Info } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+// import { Label } from '@/components/ui/label'; // No longer directly used
 import {
   Form,
   FormControl,
@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import type { SendEmailFormState } from '@/lib/actions';
 import { sendEmailAction } from '@/lib/actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   recipients: z.string().min(1, 'Please enter at least one recipient email.'),
@@ -58,34 +59,34 @@ export function EmailForm() {
 
   React.useEffect(() => {
     if (formState.message) {
+      const toastDetails: { title: string; description: string; variant?: 'default' | 'destructive' } = {
+        title: formState.success ? 'Success!' : 'Error',
+        description: formState.message,
+        variant: formState.success ? 'default' : 'destructive',
+      };
+
       if (formState.success) {
-        toast({
-          title: 'Success!',
-          description: formState.message,
-        });
+        if (formState.details) { // Handle partial success details
+          const details = formState.details as any;
+          if (details.successful > 0 && details.failed > 0) {
+            toastDetails.title = 'Partial Success';
+            toastDetails.description = `${formState.message} Sent: ${details.successful}, Failed: ${details.failed}.`;
+          }
+        }
         form.reset();
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''; // Reset file input
+          fileInputRef.current.value = ''; 
         }
-      } else {
-        toast({
-          title: 'Error',
-          description: formState.message || 'An error occurred.',
-          variant: 'destructive',
-        });
       }
+      
+      toast(toastDetails);
     }
+
     if (formState.errors) {
         if (formState.errors.recipients) form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
         if (formState.errors.subject) form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
         if (formState.errors.body) form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
-        if (formState.errors._form) { // General form error
-             toast({
-                title: 'Form Error',
-                description: formState.errors._form.join(', '),
-                variant: 'destructive',
-            });
-        }
+        // _form errors are handled by the main message toast
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formState]);
@@ -110,12 +111,18 @@ export function EmailForm() {
       <CardHeader>
         <CardTitle className="text-2xl">Compose Email</CardTitle>
         <CardDescription>
-          Fill in the details below to send your email to multiple recipients. The sender&apos;s email is configured on the server.
-          <br />
-          If you encounter sending errors, please ensure the server&apos;s email credentials (<code>NODEMAILER_USER</code>, <code>NODEMAILER_PASS</code> in <code>.env.local</code>) are correct and that the email provider allows access (e.g., for Gmail, use an &quot;App Password&quot; if 2-Step Verification is enabled).
+          Fill in the details below to send your email. Emails include a tracked link to a document.
+          Sender&apos;s email is configured on the server.
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Tracking Information</AlertTitle>
+          <AlertDescription>
+            Emails sent via this form will include a link to a document. Access to this link by recipients will be logged (recipient email and time of access). No other personal information or passwords are ever collected.
+          </AlertDescription>
+        </Alert>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
@@ -164,7 +171,7 @@ export function EmailForm() {
                   <FormControl>
                     <Textarea
                       id="body"
-                      placeholder="Write your email content here..."
+                      placeholder="Write your email content here... A tracking link for a document will be appended."
                       className="min-h-[150px]"
                       {...field}
                     />
@@ -196,14 +203,14 @@ export function EmailForm() {
                      />
                   </FormControl>
                   <FormDescription>
-                    Select a single file to attach.
+                    Select a single file to attach (optional).
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            {formState.errors?._form && (
+            {formState.errors?._form && !formState.message && ( // Display _form error only if no general message toast shown
               <p className="text-sm font-medium text-destructive">{formState.errors._form.join(', ')}</p>
             )}
 
@@ -216,7 +223,7 @@ export function EmailForm() {
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  Send Email
+                  Send Email(s)
                 </>
               )}
             </Button>
