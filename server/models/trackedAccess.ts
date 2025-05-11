@@ -17,17 +17,21 @@ const TrackedAccessSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  emailSubject: { // Optional: to give context to the tracked link
+  emailSubject: { 
     type: String, 
+    default: 'N/A',
   },
-  ipAddress: { // Store IP address
+  ipAddress: { 
     type: String,
+    default: 'N/A',
   },
-  userAgent: { // Store raw User-Agent string
+  userAgent: { 
     type: String,
+    default: 'N/A',
   },
-  operatingSystem: { // Store Operating System information
+  operatingSystem: { 
     type: String,
+    default: 'N/A',
   },
   // Storing passwords, especially plaintext or hashed passwords of recipients,
   // is a severe security risk and has ethical and legal implications.
@@ -37,10 +41,18 @@ const TrackedAccessSchema = new mongoose.Schema({
   // },
 });
 
-// Use the collection name from environment variable or default to 'tracked_accesses'
-const collectionName = process.env.MONGODB_TRACKED_ACCESS_COLLECTION || 'tracked_accesses';
+// Determine and log the collection name
+let collectionNameEnv = process.env.MONGODB_TRACKED_ACCESS_COLLECTION;
+let finalCollectionName: string;
 
-const TrackedAccess = mongoose.models.TrackedAccess || mongoose.model('TrackedAccess', TrackedAccessSchema, collectionName);
+if (!collectionNameEnv || collectionNameEnv.trim() === '') {
+  console.warn("MONGODB_TRACKED_ACCESS_COLLECTION environment variable is not set or is empty. Defaulting to 'tracked_accesses'.");
+  finalCollectionName = 'tracked_accesses';
+} else {
+  finalCollectionName = collectionNameEnv.trim();
+  console.log(`Using MongoDB collection for tracked access: ${finalCollectionName}`);
+}
+
+const TrackedAccess = mongoose.models.TrackedAccess || mongoose.model('TrackedAccess', TrackedAccessSchema, finalCollectionName);
 
 export default TrackedAccess;
-
