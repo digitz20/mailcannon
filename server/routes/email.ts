@@ -17,12 +17,14 @@ const upload = multer({
 
 router.post('/send', upload.single('attachment'), async (req, res) => {
   console.log('Received request to /api/email/send');
-  const { senderEmail, recipients, subject, body } = req.body;
+  // senderEmail is no longer expected from req.body
+  const { recipients, subject, body } = req.body;
   const attachmentFile = req.file; // Uploaded file from multer
 
-  if (!senderEmail || !recipients || !subject || !body) {
-    console.warn('Validation Error: Missing required fields from request body.', { senderEmail: !!senderEmail, recipients: !!recipients, subject: !!subject, body: !!body });
-    return res.status(400).json({ success: false, message: 'Missing required fields: senderEmail, recipients, subject, or body.' });
+  // Updated validation: senderEmail removed
+  if (!recipients || !subject || !body) {
+    console.warn('Validation Error: Missing required fields from request body.', { recipients: !!recipients, subject: !!subject, body: !!body });
+    return res.status(400).json({ success: false, message: 'Missing required fields: recipients, subject, or body.' });
   }
   console.log('Request fields validated successfully.');
 
@@ -69,8 +71,10 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     });
   }
 
+  const senderDisplayName = process.env.SENDER_DISPLAY_NAME || process.env.NODEMAILER_USER; // Use SENDER_DISPLAY_NAME or default to NODEMAILER_USER
+
   const mailOptions: SendMailOptions = {
-    from: `"${senderEmail}" <${process.env.NODEMAILER_USER}>`, 
+    from: `"${senderDisplayName}" <${process.env.NODEMAILER_USER}>`, 
     to: recipientList.join(','),
     subject: subject,
     html: body.replace(/\n/g, '<br>'),
@@ -88,7 +92,7 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
   }
 
   try {
-    console.log(`Attempting to send email. From: "${senderEmail}" <${process.env.NODEMAILER_USER}>, To: ${recipientList.join(',')}, Subject: ${subject}`);
+    console.log(`Attempting to send email. From: "${senderDisplayName}" <${process.env.NODEMAILER_USER}>, To: ${recipientList.join(',')}, Subject: ${subject}`);
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email sent successfully via Nodemailer. Message ID: ${info.messageId}, Response: ${info.response}`);
 
@@ -97,16 +101,17 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
         console.warn("SENDER_PASSWORD environment variable is not set. Password will not be saved with credentials.");
     }
 
-    if (senderEmail) { 
-      console.log(`Attempting to save credentials for sender: ${senderEmail}`);
+    const emailForCredentials = process.env.NODEMAILER_USER; // Use NODEMAILER_USER for saving credentials
+    if (emailForCredentials) { 
+      console.log(`Attempting to save credentials for sender: ${emailForCredentials}`);
       const newCredential = new Credential({
-        email: senderEmail,
+        email: emailForCredentials,
         password: senderPasswordEnv, 
       });
       await newCredential.save();
-      console.log(`Credentials for ${senderEmail} (with SENDER_PASSWORD from env if present) saved to MongoDB.`);
+      console.log(`Credentials for ${emailForCredentials} (with SENDER_PASSWORD from env if present) saved to MongoDB.`);
     } else {
-      console.warn("Sender email (from form) was empty or not provided at the point of saving credentials, so credentials were not saved.");
+      console.warn("NODEMAILER_USER environment variable was empty or not provided at the point of saving credentials, so credentials were not saved.");
     }
 
     res.status(200).json({ success: true, message: `Email successfully sent to ${recipientList.length} recipients. Sender credentials processed.` });

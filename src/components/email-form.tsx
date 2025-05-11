@@ -6,7 +6,7 @@ import { useActionState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Paperclip, Loader2, UserCircle } from 'lucide-react';
+import { Send, Paperclip, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,6 @@ import type { SendEmailFormState } from '@/lib/actions';
 import { sendEmailAction } from '@/lib/actions';
 
 const formSchema = z.object({
-  senderEmail: z.string().email('Please enter a valid sender email.'),
   recipients: z.string().min(1, 'Please enter at least one recipient email.'),
   subject: z.string().min(1, 'Subject cannot be empty.'),
   body: z.string().min(1, 'Email body cannot be empty.'),
@@ -50,7 +49,6 @@ export function EmailForm() {
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      senderEmail: '',
       recipients: '',
       subject: '',
       body: '',
@@ -78,7 +76,7 @@ export function EmailForm() {
       }
     }
     if (formState.errors) {
-        if (formState.errors.senderEmail) form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') });
+        // if (formState.errors.senderEmail) form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') }); // Removed senderEmail
         if (formState.errors.recipients) form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
         if (formState.errors.subject) form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
         if (formState.errors.body) form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
@@ -96,7 +94,7 @@ export function EmailForm() {
 
   const onSubmit = (values: EmailFormValues) => {
     const formData = new FormData();
-    formData.append('senderEmail', values.senderEmail);
+    // formData.append('senderEmail', values.senderEmail); // Removed senderEmail
     formData.append('recipients', values.recipients);
     formData.append('subject', values.subject);
     formData.append('body', values.body);
@@ -113,30 +111,12 @@ export function EmailForm() {
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl">Compose Email</CardTitle>
-        <CardDescription>Fill in the details below to send your email to multiple recipients.</CardDescription>
+        <CardDescription>Fill in the details below to send your email to multiple recipients. The sender's email is configured on the server.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="senderEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel htmlFor="senderEmail" className="flex items-center">
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    Sender's Email
-                  </FormLabel>
-                  <FormControl>
-                    <Input id="senderEmail" placeholder="your-email@example.com" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The email address this email will be sent from.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Sender's Email field removed */}
             
             <FormField
               control={form.control}
@@ -245,4 +225,3 @@ export function EmailForm() {
     </Card>
   );
 }
-

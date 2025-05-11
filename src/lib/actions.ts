@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache';
 // This Zod schema can still be used by the EmailForm for client-side validation.
 // The primary server-side validation will occur in the Express backend.
 const emailSchemaValidation = z.object({
-  senderEmail: z.string().email('Invalid sender email format.'),
+  // senderEmail: z.string().email('Invalid sender email format.'), // Removed senderEmail
   recipients: z.string().min(1, 'Recipient emails are required.'),
   subject: z.string().min(1, 'Subject is required.'),
   body: z.string().min(1, 'Email body is required.'),
@@ -18,7 +18,7 @@ export interface SendEmailFormState {
   message: string | null;
   success: boolean;
   errors?: {
-    senderEmail?: string[];
+    // senderEmail?: string[]; // Removed senderEmail
     recipients?: string[];
     subject?: string[];
     body?: string[];
