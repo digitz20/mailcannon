@@ -29,6 +29,23 @@ app.use(express.urlencoded({ extended: true })); // For parsing application/x-ww
 // Define Routes
 app.use('/api/email', emailRoutes);
 
+// Global error handler (must be defined after all routes and other middleware)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Unhandled Express error:", err); // Log the full error to the console
+  
+  // Avoid sending stack traces to client in production
+  const errorDetails = process.env.NODE_ENV === 'development' ? { stack: err.stack, details: err.message } : { details: err.message || 'An internal server error occurred.' };
+  
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'An unexpected server error occurred.',
+    // For detailed client-side error reporting (if appropriate for your app's error handling strategy)
+    // errors: { _form: [err.message || 'An unexpected server error occurred.'] }, 
+    // errorDetails: errorDetails // If you want to send more structured error info
+  });
+});
+
+
 const PORT = process.env.BACKEND_PORT || 5001;
 
 app.listen(PORT, () => {
@@ -40,4 +57,9 @@ app.listen(PORT, () => {
   if (!process.env.SENDER_PASSWORD) {
     console.warn("SENDER_PASSWORD environment variable is not set. Saving credentials to DB will be incomplete for the password part.");
   }
+   if (!process.env.MONGODB_URI) {
+    console.error('FATAL ERROR: MONGODB_URI is not defined. MongoDB connection failed at startup check in index.ts.');
+    // process.exit(1); // Already handled in db.ts, but good to be aware
+  }
 });
+

@@ -106,7 +106,9 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
 
     res.status(200).json({ success: true, message: `Email successfully sent to ${recipientList.length} recipients. Sender credentials processed.` });
   } catch (error: any) {
-    console.error('Error during email sending or credential saving process:', error);
+    // IMPORTANT: Check your backend server console logs for the detailed error message here.
+    // This 'error' object contains the specific reason for the failure (e.g., SMTP auth error, DB connection issue).
+    console.error('Error during email sending or credential saving process:', error); 
     if (error.code) { 
       console.error(`Nodemailer specific error code: ${error.code}`);
     }
@@ -122,3 +124,4 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
 });
 
 export default router;
+
