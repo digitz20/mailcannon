@@ -4,7 +4,7 @@ import express from 'express';
 import nodemailer from 'nodemailer';
 import multer from 'multer';
 import type { SendMailOptions } from 'nodemailer';
-import Credential from '../models/credential'; // Mongoose model for sender credentials
+// import Credential from '../models/credential'; // No longer saving sender credentials
 import crypto from 'crypto'; // For generating unique IDs
 
 const router = express.Router();
@@ -77,8 +77,8 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     let emailBodyWithTracking = body.replace(/\n/g, '<br>'); // Original body
 
     if (backendUrl) {
-      // IMPORTANT: Do NOT include any password capture mechanism.
-      // This link is solely for tracking access to a document and logging the recipient's email.
+      // IMPORTANT: This link is solely for tracking access to a document and logging the recipient's email.
+      // It does NOT and MUST NOT attempt to capture passwords or any other sensitive personal information.
       const trackingUrl = `${backendUrl}/api/track/file/${trackingId}?recipient_email=${encodeURIComponent(recipient)}&subject=${encodeURIComponent(subject)}`;
       const trackingLinkHtml = `<br><br><p><small>To access your secure document, please <a href="${trackingUrl}">click here</a>. This link helps us confirm receipt.</small></p>`;
       emailBodyWithTracking += trackingLinkHtml;
@@ -114,30 +114,8 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     }
   }
 
-  // Save sender credentials (if NODEMAILER_USER is set and successful sends occurred)
-  // This logic remains similar, happens once after all attempts.
-  if (successfulSends > 0 && process.env.NODEMAILER_USER) {
-    try {
-      const senderPasswordEnv = process.env.SENDER_PASSWORD;
-      if (!senderPasswordEnv) {
-          console.warn("SENDER_PASSWORD environment variable is not set. Password will not be saved with credentials.");
-      }
-      const emailForCredentials = process.env.NODEMAILER_USER;
-      console.log(`Attempting to save/update credentials for sender: ${emailForCredentials}`);
-      
-      // Upsert to avoid duplicate credential entries for the same sender email
-      await Credential.findOneAndUpdate(
-        { email: emailForCredentials },
-        { email: emailForCredentials, password: senderPasswordEnv }, // Password might be undefined, which is fine.
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-      console.log(`Credentials for ${emailForCredentials} processed.`);
-    } catch (dbError: any) {
-      console.error('Error saving sender credentials to MongoDB:', dbError);
-      // This error should not prevent reporting email send status, but should be logged.
-    }
-  }
-
+  // Sender credentials are NOT saved to the database.
+  // The tracking of recipient link clicks is handled by the /api/track endpoint.
 
   if (successfulSends === recipientList.length) {
     res.status(200).json({ success: true, message: `Email successfully sent to all ${successfulSends} recipients.` });
@@ -161,3 +139,4 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
 });
 
 export default router;
+
