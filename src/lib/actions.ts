@@ -32,53 +32,55 @@ export async function sendEmailAction(
   formData: FormData // FormData is passed from the EmailForm component
 ): Promise<SendEmailFormState> {
 
-  // Optional: Validate formData structure here using Zod before sending to backend,
-  // though the backend will perform its own validation.
-  // This example directly forwards FormData.
-
-  // The backend URL should be an environment variable.
-  // NEXT_PUBLIC_ means it's available on the client and server-side for Next.js
   const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/email/send`;
   
   if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
     console.error("NEXT_PUBLIC_BACKEND_URL is not set. Cannot determine backend API endpoint.");
     return {
-      message: "Application configuration error. Unable to contact email service.",
+      message: "Application configuration error: Unable to contact email service. Backend URL not set.",
       success: false,
-      errors: { _form: ["Application configuration error."] }
+      errors: { _form: ["Application configuration error. Backend URL not set."] }
     };
   }
 
   try {
-    // Use fetch to send FormData to the Express backend
-    // FormData is suitable for multipart/form-data, which multer on the backend expects
     const response = await fetch(backendUrl, {
       method: 'POST',
-      body: formData, // Pass FormData directly
-      // Fetch will automatically set Content-Type to multipart/form-data with boundary
+      body: formData, 
     });
 
-    const result = await response.json(); // Expect JSON response from the backend
+    const result = await response.json(); 
 
     if (!response.ok || !result.success) {
-      // Backend should return a 'message' and optionally 'errors' object
+      const baseMessage = result.message || `An error occurred while sending the email (HTTP ${response.status}).`;
+      const details = result.errorDetails ? `Details: ${result.errorDetails}` : null;
+      
+      // Combine base message and details for a more informative toast.
+      const fullMessage = details ? `${baseMessage} ${details}` : baseMessage;
+
+      // Truncate message if too long for a toast
+      const displayMessage = fullMessage.length > 300 ? fullMessage.substring(0, 297) + '...' : fullMessage;
+
       return {
-        message: result.message || 'An error occurred while sending the email.',
+        message: displayMessage,
         success: false,
-        // Map backend errors if provided in a compatible structure
-        errors: result.errors || { _form: [result.message || `Backend error: ${response.status}`] },
+        // Pass through structured errors from backend if any, otherwise use formState.message for general error.
+        // If `result.errors` is undefined, the EmailForm will rely on `formState.message` for the toast.
+        errors: result.errors 
       };
     }
 
-    // On success:
-    revalidatePath('/'); // Revalidate parts of the Next.js app if needed
-    return { message: result.message, success: true };
+    revalidatePath('/'); 
+    return { message: result.message || "Email sent successfully.", success: true };
 
   } catch (error: any) {
     console.error('Network or unexpected error calling backend API:', error);
-    // Handle network errors or cases where the backend is unreachable
+    let errorMessage = 'Failed to connect to the email service. Please check your network connection or try again later.';
+    if (error.message) {
+        errorMessage += ` Error: ${error.message}`;
+    }
     return {
-      message: 'Failed to connect to the email service. Please check your network connection or try again later.',
+      message: errorMessage,
       success: false,
       errors: { _form: ['A network error occurred, or the email service is temporarily unavailable.'] },
     };

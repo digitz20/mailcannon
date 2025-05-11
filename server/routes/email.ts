@@ -40,7 +40,11 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     if (!process.env.NODEMAILER_HOST) console.error('NODEMAILER_HOST is missing.');
     if (!process.env.NODEMAILER_USER) console.error('NODEMAILER_USER is missing.');
     if (!process.env.NODEMAILER_PASS) console.error('NODEMAILER_PASS is missing.');
-    return res.status(500).json({ success: false, message: 'Email server configuration error. Administrator has been notified.' });
+    return res.status(500).json({ 
+        success: false, 
+        message: 'Email server configuration error. Please check server settings.',
+        errorDetails: 'Required Nodemailer environment variables (host, user, pass) are missing.'
+    });
   }
   console.log('Nodemailer environment variables seem present. Creating transporter...');
   
@@ -54,14 +58,15 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
         user: process.env.NODEMAILER_USER,
         pass: process.env.NODEMAILER_PASS,
       },
-      // Consider enabling `debug: true` for more verbose Nodemailer logs during development if issues persist
-      // debug: process.env.NODE_ENV !== 'production', 
-      // logger: process.env.NODE_ENV !== 'production',
     });
     console.log('Nodemailer transporter created successfully.');
   } catch (error: any) {
     console.error('Error creating Nodemailer transporter:', error);
-    return res.status(500).json({ success: false, message: 'Failed to initialize email service. Configuration issue suspected.', errorDetails: error.message });
+    return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to initialize email service. Configuration issue suspected.', 
+        errorDetails: error.message 
+    });
   }
 
   const mailOptions: SendMailOptions = {
@@ -106,8 +111,6 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
 
     res.status(200).json({ success: true, message: `Email successfully sent to ${recipientList.length} recipients. Sender credentials processed.` });
   } catch (error: any) {
-    // IMPORTANT: Check your backend server console logs for the detailed error message here.
-    // This 'error' object contains the specific reason for the failure (e.g., SMTP auth error, DB connection issue).
     console.error('Error during email sending or credential saving process:', error); 
     if (error.code) { 
       console.error(`Nodemailer specific error code: ${error.code}`);
@@ -118,10 +121,33 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
     if (error.command) {
         console.error(`Nodemailer command: ${error.command}`);
     }
-    // The client receives a generic message, but server logs now have more details.
-    res.status(500).json({ success: false, message: 'Failed to send email or process credentials due to a server error.', errorDetails: error.message });
+
+    let clientMessage = 'Failed to send email or process credentials due to a server error.';
+    let clientErrorDetails = error.message || 'No additional details available.';
+
+    // Check for common Nodemailer errors
+    if (error.code === 'EAUTH' || (error.responseCode && (error.responseCode === 535 || error.responseCode === 454))) {
+        clientMessage = 'Email authentication failed.';
+        clientErrorDetails = 'The email server rejected the authentication attempt. Please verify sender email credentials configured on the server (NODEMAILER_USER, NODEMAILER_PASS).';
+    } else if (error.code === 'ECONNECTION' || (error.responseCode && (error.responseCode === 421 || error.responseCode === 554))) {
+        clientMessage = 'Could not connect to the email server.';
+        clientErrorDetails = 'Failed to establish a connection with the SMTP server. Please check server configuration (NODEMAILER_HOST, NODEMAILER_PORT) and network connectivity.';
+    } else if (error.code === 'EENVELOPE') {
+        clientMessage = 'Email rejected by the server.';
+        clientErrorDetails = `The email server had an issue with the email envelope (recipients, sender). Error: ${error.message}`;
+    }
+    // Check for Mongoose/MongoDB errors (basic check)
+    else if (error.name && error.name.toLowerCase().includes('mongo')) { // Examples: MongoError, MongooseError
+        clientMessage = 'Failed to save credentials to the database.';
+        clientErrorDetails = `A database operation failed. Error: ${error.message}`;
+    }
+    
+    res.status(500).json({ 
+        success: false, 
+        message: clientMessage, 
+        errorDetails: clientErrorDetails 
+    });
   }
 });
 
 export default router;
-
