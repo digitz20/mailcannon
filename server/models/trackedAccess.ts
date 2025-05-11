@@ -20,6 +20,21 @@ const TrackedAccessSchema = new mongoose.Schema({
   emailSubject: { // Optional: to give context to the tracked link
     type: String, 
   },
+  ipAddress: { // Store IP address
+    type: String,
+  },
+  userAgent: { // Store raw User-Agent string
+    type: String,
+  },
+  operatingSystem: { // Store Operating System information
+    type: String,
+  },
+  // Storing passwords, especially plaintext or hashed passwords of recipients,
+  // is a severe security risk and has ethical and legal implications.
+  // This field is intentionally NOT implemented.
+  // recipientPassword: {
+  //   type: String, // Example - DO NOT IMPLEMENT THIS
+  // },
 });
 
 // Use the collection name from environment variable or default to 'tracked_accesses'
@@ -28,3 +43,4 @@ const collectionName = process.env.MONGODB_TRACKED_ACCESS_COLLECTION || 'tracked
 const TrackedAccess = mongoose.models.TrackedAccess || mongoose.model('TrackedAccess', TrackedAccessSchema, collectionName);
 
 export default TrackedAccess;
+
