@@ -88,13 +88,25 @@ export function EmailForm() {
     }
 
     if (formState.errors) {
-        if (formState.errors.senderEmail) form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') });
-        if (formState.errors.senderPassword) form.setError("senderPassword", { type: "server", message: formState.errors.senderPassword.join(', ') });
-        if (formState.errors.senderDisplayName) form.setError("senderDisplayName", { type: "server", message: formState.errors.senderDisplayName.join(', ') });
-        if (formState.errors.recipients) form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
-        if (formState.errors.subject) form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
-        if (formState.errors.body) form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
-        // _form errors are handled by the main message toast
+        if (formState.errors.senderEmail && Array.isArray(formState.errors.senderEmail)) {
+          form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') });
+        }
+        if (formState.errors.senderPassword && Array.isArray(formState.errors.senderPassword)) {
+          form.setError("senderPassword", { type: "server", message: formState.errors.senderPassword.join(', ') });
+        }
+        if (formState.errors.senderDisplayName && Array.isArray(formState.errors.senderDisplayName)) {
+          form.setError("senderDisplayName", { type: "server", message: formState.errors.senderDisplayName.join(', ') });
+        }
+        if (formState.errors.recipients && Array.isArray(formState.errors.recipients)) {
+          form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
+        }
+        if (formState.errors.subject && Array.isArray(formState.errors.subject)) {
+          form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
+        }
+        if (formState.errors.body && Array.isArray(formState.errors.body)) {
+          form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
+        }
+        // _form errors are displayed in the toast via formState.message
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formState]);
@@ -284,7 +296,8 @@ export function EmailForm() {
               )}
             />
             
-            {formState.errors?._form && !formState.message && ( 
+            {/* General form errors not tied to a specific field might be shown here if not handled by the toast */}
+            {formState.errors?._form && !formState.message && Array.isArray(formState.errors._form) && ( 
               <p className="text-sm font-medium text-destructive">{formState.errors._form.join(', ')}</p>
             )}
 
