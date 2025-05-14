@@ -4,9 +4,11 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
-// This Zod schema can still be used by the EmailForm for client-side validation.
-// The primary server-side validation will occur in the Express backend.
+// This Zod schema is for reference or potential future direct use if not using FormData.
+// Client-side validation is primarily handled by react-hook-form in EmailForm.
 const emailSchemaValidation = z.object({
+  senderEmail: z.string().email(),
+  senderPassword: z.string().min(1),
   recipients: z.string().min(1, 'Recipient emails are required.'),
   subject: z.string().min(1, 'Subject is required.'),
   body: z.string().min(1, 'Email body is required.'),
@@ -17,13 +19,15 @@ export interface SendEmailFormState {
   message: string | null;
   success: boolean;
   errors?: {
+    senderEmail?: string[];
+    senderPassword?: string[];
     recipients?: string[];
     subject?: string[];
     body?: string[];
     attachment?: string[];
     _form?: string[]; 
   };
-  details?: any; // For additional details from backend, e.g., partial success info
+  details?: any; 
 }
 
 export async function sendEmailAction(
@@ -42,6 +46,13 @@ export async function sendEmailAction(
     };
   }
 
+  // Optionally, perform basic FormData presence checks here if desired,
+  // though the backend will perform the comprehensive validation.
+  // For example:
+  // if (!formData.get('senderEmail') || !formData.get('senderPassword')) {
+  //   return { message: "Sender email and password must be provided.", success: false, errors: { _form: ["Sender email and password must be provided."]}};
+  // }
+
   try {
     const response = await fetch(backendUrlApi, {
       method: 'POST',
@@ -50,29 +61,32 @@ export async function sendEmailAction(
 
     const result = await response.json(); 
 
-    // HTTP 207 (Multi-Status) can indicate partial success for batch operations like sending to multiple recipients
     if (response.status === 207 && result.success) {
        console.log("Partial success sending emails:", result.message, result.details);
        return {
          message: result.message || "Emails processed with mixed results. Check details.",
-         success: true, // Still considered a success overall if some went through
+         success: true, 
          details: result.details,
        };
     }
 
-
     if (!response.ok || !result.success) {
       const baseMessage = result.message || `An error occurred (HTTP ${response.status}).`;
-      const errorDetails = result.errorDetails || (typeof result.details === 'string' ? result.details : null);
+      const errorDetailsMsg = result.errorDetails || (typeof result.details === 'string' ? result.details : (result.details?.errors?.[0]?.error ? result.details.errors[0].error : null) );
       
-      const fullMessage = errorDetails ? `${baseMessage} Details: ${errorDetails}` : baseMessage;
+      let fullMessage = baseMessage;
+      if (errorDetailsMsg && typeof errorDetailsMsg === 'string' && !baseMessage.includes(errorDetailsMsg)) {
+        fullMessage = `${baseMessage} Details: ${errorDetailsMsg}`;
+      }
+      
       const displayMessage = fullMessage.length > 300 ? fullMessage.substring(0, 297) + '...' : fullMessage;
 
       return {
         message: displayMessage,
         success: false,
-        errors: result.errors,
-        details: result.details // Pass along any structured error details
+        // Pass through errors if the backend structures them for field-specific display
+        errors: result.errors || (response.status === 400 && result.message ? { _form: [result.message] } : { _form: [displayMessage] }),
+        details: result.details 
       };
     }
 

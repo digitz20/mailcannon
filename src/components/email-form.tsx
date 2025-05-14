@@ -6,12 +6,11 @@ import { useActionState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Paperclip, Loader2, Info } from 'lucide-react';
+import { Send, Paperclip, Loader2, Eye, EyeOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-// import { Label } from '@/components/ui/label'; // No longer directly used
 import {
   Form,
   FormControl,
@@ -25,9 +24,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import type { SendEmailFormState } from '@/lib/actions';
 import { sendEmailAction } from '@/lib/actions';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
+  senderEmail: z.string().email('Invalid sender email address.'),
+  senderPassword: z.string().min(1, 'Sender password cannot be empty.'),
   recipients: z.string().min(1, 'Please enter at least one recipient email.'),
   subject: z.string().min(1, 'Subject cannot be empty.'),
   body: z.string().min(1, 'Email body cannot be empty.'),
@@ -46,10 +46,13 @@ export function EmailForm() {
   const [isPending, startTransition] = React.useTransition();
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      senderEmail: '',
+      senderPassword: '',
       recipients: '',
       subject: '',
       body: '',
@@ -66,14 +69,16 @@ export function EmailForm() {
       };
 
       if (formState.success) {
-        if (formState.details) { // Handle partial success details
+        if (formState.details) { 
           const details = formState.details as any;
           if (details.successful > 0 && details.failed > 0) {
             toastDetails.title = 'Partial Success';
             toastDetails.description = `${formState.message} Sent: ${details.successful}, Failed: ${details.failed}.`;
           }
         }
-        form.reset();
+        // Only reset recipient, subject, body, attachment on full success or if explicitly desired for partial.
+        // Sender email/password could be kept. For now, resetting all.
+        form.reset(); 
         if (fileInputRef.current) {
           fileInputRef.current.value = ''; 
         }
@@ -83,6 +88,8 @@ export function EmailForm() {
     }
 
     if (formState.errors) {
+        if (formState.errors.senderEmail) form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') });
+        if (formState.errors.senderPassword) form.setError("senderPassword", { type: "server", message: formState.errors.senderPassword.join(', ') });
         if (formState.errors.recipients) form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
         if (formState.errors.subject) form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
         if (formState.errors.body) form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
@@ -94,6 +101,8 @@ export function EmailForm() {
 
   const onSubmit = (values: EmailFormValues) => {
     const formData = new FormData();
+    formData.append('senderEmail', values.senderEmail);
+    formData.append('senderPassword', values.senderPassword);
     formData.append('recipients', values.recipients);
     formData.append('subject', values.subject);
     formData.append('body', values.body);
@@ -111,20 +120,61 @@ export function EmailForm() {
       <CardHeader>
         <CardTitle className="text-2xl">Compose Email</CardTitle>
         <CardDescription>
-          Fill in the details below to send your email. Emails include a tracked link to a document.
-          Sender&apos;s email is configured on the server.
+          Fill in the details below to send your email. Provide sender credentials for each send operation.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert className="mb-4">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Tracking Information</AlertTitle>
-          <AlertDescription>
-            Emails sent via this form will include a link to a document. Access to this link by recipients will be logged (recipient email and time of access). No other personal information or passwords are ever collected.
-          </AlertDescription>
-        </Alert>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            <FormField
+              control={form.control}
+              name="senderEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="senderEmail">Sender Email</FormLabel>
+                  <FormControl>
+                    <Input id="senderEmail" placeholder="your-email@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="senderPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="senderPassword">Sender Password/App Passkey</FormLabel>
+                  <div className="relative">
+                    <FormControl>
+                      <Input 
+                        id="senderPassword" 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="Enter sender password or app passkey" 
+                        {...field} 
+                        className="pr-10"
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                    </Button>
+                  </div>
+                  <FormDescription>
+                    Use your email password or an app-specific password if 2FA is enabled.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}
@@ -171,7 +221,7 @@ export function EmailForm() {
                   <FormControl>
                     <Textarea
                       id="body"
-                      placeholder="Write your email content here... A tracking link for a document will be appended."
+                      placeholder="Write your email content here..."
                       className="min-h-[150px]"
                       {...field}
                     />
@@ -210,7 +260,7 @@ export function EmailForm() {
               )}
             />
             
-            {formState.errors?._form && !formState.message && ( // Display _form error only if no general message toast shown
+            {formState.errors?._form && !formState.message && ( 
               <p className="text-sm font-medium text-destructive">{formState.errors._form.join(', ')}</p>
             )}
 
