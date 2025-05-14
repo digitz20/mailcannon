@@ -4,6 +4,8 @@ import express from 'express';
 import nodemailer from 'nodemailer';
 import multer from 'multer';
 import type { SendMailOptions } from 'nodemailer';
+import TrackedAccess from '../models/trackedAccess'; // For potential future use or if keeping any tracking logic
+import { randomBytes } from 'crypto'; // For generating unique tracking IDs if needed
 
 const router = express.Router();
 
@@ -15,8 +17,8 @@ const upload = multer({
 
 router.post('/send', upload.single('attachment'), async (req, res) => {
   console.log('Received request to /api/email/send');
-  // senderEmail and senderPassword will now come from the form
-  const { senderEmail, senderPassword, recipients, subject, body } = req.body;
+  
+  const { senderEmail, senderPassword, senderDisplayName, recipients, subject, body } = req.body;
   const attachmentFile = req.file;
 
   if (!senderEmail || !senderPassword || !recipients || !subject || !body) {
@@ -41,8 +43,7 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
   }
   console.log(`Preparing to send email to ${recipientList.length} recipients: ${recipientList.join(', ')}`);
 
-  // Nodemailer server configuration still comes from .env
-  if (!process.env.NODEMAILER_HOST) { // Port can have default
+  if (!process.env.NODEMAILER_HOST) {
     console.error('Nodemailer Configuration Error: Host not configured.');
     return res.status(500).json({ 
         success: false, 
@@ -53,18 +54,16 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
 
   let transporter;
   try {
-    // Use senderEmail and senderPassword from the form for auth
     transporter = nodemailer.createTransport({
       host: process.env.NODEMAILER_HOST,
       port: parseInt(process.env.NODEMAILER_PORT || "587", 10),
-      secure: parseInt(process.env.NODEMAILER_PORT || "587", 10) === 465, // true for 465, false for other ports
+      secure: parseInt(process.env.NODEMAILER_PORT || "587", 10) === 465,
       auth: {
-        user: senderEmail, // From form
-        pass: senderPassword, // From form
+        user: senderEmail, 
+        pass: senderPassword, 
       },
-      // Add timeout options
-      connectionTimeout: 10000, // 10 seconds
-      socketTimeout: 15000, // 15 seconds
+      connectionTimeout: 10000, 
+      socketTimeout: 15000, 
     });
     console.log('Nodemailer transporter created successfully using provided sender credentials.');
   } catch (error: any) {
@@ -75,22 +74,20 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
         errorDetails: error.message 
     });
   }
-
-  // Display name can still be a global setting or fallback to the sender's email from form
-  const senderDisplayName = process.env.SENDER_DISPLAY_NAME || senderEmail.split('@')[0]; 
+  
+  const effectiveDisplayName = senderDisplayName || process.env.SENDER_DISPLAY_NAME || senderEmail.split('@')[0];
   
   let successfulSends = 0;
   let failedSendsInfo: Array<{ recipient: string; error: string }> = [];
 
   for (const recipient of recipientList) {
-    // Email body is now just the user-provided body, converted to HTML line breaks
     const emailBodyHtml = body.replace(/\n/g, '<br>');
 
     const mailOptions: SendMailOptions = {
-      from: `"${senderDisplayName}" <${senderEmail}>`, // Use senderEmail from form
+      from: `"${effectiveDisplayName}" <${senderEmail}>`,
       to: recipient,
       subject: subject,
-      html: emailBodyHtml, // Use the processed body without tracking link
+      html: emailBodyHtml,
     };
 
     if (attachmentFile) {
@@ -110,10 +107,9 @@ router.post('/send', upload.single('attachment'), async (req, res) => {
       successfulSends++;
     } catch (error: any) {
       console.error(`Error sending email to ${recipient}:`, error.message, error.code, error.responseCode, error.command);
-      // Provide more detailed error messages
       let errorMessage = error.message;
       if (error.code === 'EAUTH' || error.responseCode === 535) {
-        errorMessage = `Authentication failed for sender ${senderEmail}. Please check credentials. (Server: ${error.response})`;
+        errorMessage = `Authentication failed for sender ${senderEmail}. Please check credentials. (Server: ${error.response || 'N/A'})`;
       } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
         errorMessage = `Could not connect to email server ${process.env.NODEMAILER_HOST}. Please check server settings and network.`;
       }

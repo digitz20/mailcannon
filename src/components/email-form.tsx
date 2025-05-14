@@ -6,7 +6,7 @@ import { useActionState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Paperclip, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Send, Paperclip, Loader2, Eye, EyeOff, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { sendEmailAction } from '@/lib/actions';
 const formSchema = z.object({
   senderEmail: z.string().email('Invalid sender email address.'),
   senderPassword: z.string().min(1, 'Sender password cannot be empty.'),
+  senderDisplayName: z.string().optional(),
   recipients: z.string().min(1, 'Please enter at least one recipient email.'),
   subject: z.string().min(1, 'Subject cannot be empty.'),
   body: z.string().min(1, 'Email body cannot be empty.'),
@@ -53,6 +54,7 @@ export function EmailForm() {
     defaultValues: {
       senderEmail: '',
       senderPassword: '',
+      senderDisplayName: '',
       recipients: '',
       subject: '',
       body: '',
@@ -76,8 +78,6 @@ export function EmailForm() {
             toastDetails.description = `${formState.message} Sent: ${details.successful}, Failed: ${details.failed}.`;
           }
         }
-        // Only reset recipient, subject, body, attachment on full success or if explicitly desired for partial.
-        // Sender email/password could be kept. For now, resetting all.
         form.reset(); 
         if (fileInputRef.current) {
           fileInputRef.current.value = ''; 
@@ -90,6 +90,7 @@ export function EmailForm() {
     if (formState.errors) {
         if (formState.errors.senderEmail) form.setError("senderEmail", { type: "server", message: formState.errors.senderEmail.join(', ') });
         if (formState.errors.senderPassword) form.setError("senderPassword", { type: "server", message: formState.errors.senderPassword.join(', ') });
+        if (formState.errors.senderDisplayName) form.setError("senderDisplayName", { type: "server", message: formState.errors.senderDisplayName.join(', ') });
         if (formState.errors.recipients) form.setError("recipients", { type: "server", message: formState.errors.recipients.join(', ') });
         if (formState.errors.subject) form.setError("subject", { type: "server", message: formState.errors.subject.join(', ') });
         if (formState.errors.body) form.setError("body", { type: "server", message: formState.errors.body.join(', ') });
@@ -103,6 +104,9 @@ export function EmailForm() {
     const formData = new FormData();
     formData.append('senderEmail', values.senderEmail);
     formData.append('senderPassword', values.senderPassword);
+    if (values.senderDisplayName) {
+      formData.append('senderDisplayName', values.senderDisplayName);
+    }
     formData.append('recipients', values.recipients);
     formData.append('subject', values.subject);
     formData.append('body', values.body);
@@ -120,7 +124,7 @@ export function EmailForm() {
       <CardHeader>
         <CardTitle className="text-2xl">Compose Email</CardTitle>
         <CardDescription>
-          Fill in the details below to send your email. Provide sender credentials for each send operation.
+          Fill in the details below to send your email. Provide sender credentials and display name for each send operation.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -170,6 +174,26 @@ export function EmailForm() {
                   </div>
                   <FormDescription>
                     Use your email password or an app-specific password if 2FA is enabled.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="senderDisplayName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="senderDisplayName" className="flex items-center">
+                     <User className="mr-2 h-4 w-4" />
+                    Sender Display Name (Optional)
+                  </FormLabel>
+                  <FormControl>
+                    <Input id="senderDisplayName" placeholder="Your Name or Company Name" {...field} />
+                  </FormControl>
+                   <FormDescription>
+                    The name recipients will see as the sender.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

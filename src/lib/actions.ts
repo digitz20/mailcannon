@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 const emailSchemaValidation = z.object({
   senderEmail: z.string().email(),
   senderPassword: z.string().min(1),
+  senderDisplayName: z.string().optional(),
   recipients: z.string().min(1, 'Recipient emails are required.'),
   subject: z.string().min(1, 'Subject is required.'),
   body: z.string().min(1, 'Email body is required.'),
@@ -21,6 +22,7 @@ export interface SendEmailFormState {
   errors?: {
     senderEmail?: string[];
     senderPassword?: string[];
+    senderDisplayName?: string[];
     recipients?: string[];
     subject?: string[];
     body?: string[];
@@ -45,13 +47,6 @@ export async function sendEmailAction(
       errors: { _form: ["Application configuration error. Backend URL not set."] }
     };
   }
-
-  // Optionally, perform basic FormData presence checks here if desired,
-  // though the backend will perform the comprehensive validation.
-  // For example:
-  // if (!formData.get('senderEmail') || !formData.get('senderPassword')) {
-  //   return { message: "Sender email and password must be provided.", success: false, errors: { _form: ["Sender email and password must be provided."]}};
-  // }
 
   try {
     const response = await fetch(backendUrlApi, {
@@ -84,7 +79,6 @@ export async function sendEmailAction(
       return {
         message: displayMessage,
         success: false,
-        // Pass through errors if the backend structures them for field-specific display
         errors: result.errors || (response.status === 400 && result.message ? { _form: [result.message] } : { _form: [displayMessage] }),
         details: result.details 
       };
