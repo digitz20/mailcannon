@@ -18,7 +18,7 @@ const app = express();
 connectDB();
 
 // Middleware
-const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:9002';
+const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://mailcannon.vercel.app/';
 app.use(cors({
   origin: frontendUrl,
 }));
@@ -55,13 +55,14 @@ app.listen(PORT, () => {
   if (!process.env.NODEMAILER_HOST) {
     console.warn("Nodemailer environment variables (NODEMAILER_HOST, etc.) are not set. Email sending will likely fail.");
   }
-  if (!process.env.SENDER_PASSWORD) {
-    console.warn("SENDER_PASSWORD environment variable is not set. Saving credentials to DB will be incomplete for the password part.");
+  if (!process.env.SENDER_PASSWORD && !process.env.NODEMAILER_HOST) { // Check SENDER_PASSWORD only if NODEMAILER_HOST is also checked
+    console.warn("SENDER_PASSWORD environment variable is not set. This is fine if you are providing sender credentials via the UI form for each send operation.");
   }
    if (!process.env.MONGODB_URI) {
     console.error('FATAL ERROR: MONGODB_URI is not defined. MongoDB connection failed at startup check in index.ts.');
   }
   if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
-    console.warn('WARNING: NEXT_PUBLIC_BACKEND_URL is not set in .env.local. Tracking links in emails will not work.');
+    console.warn('WARNING: NEXT_PUBLIC_BACKEND_URL is not set in .env.local. Tracking links in emails will not work (if tracking is used).');
   }
 });
+
