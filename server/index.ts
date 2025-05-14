@@ -47,7 +47,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 
-const PORT = process.env.BACKEND_PORT || 5001;
+const PORT = process.env.BACKEND_PORT || 7000;
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
