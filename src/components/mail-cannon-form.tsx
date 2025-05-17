@@ -84,7 +84,7 @@ export default function MailCannonForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipients: validEmails, // Backend expects an array
+          email: validEmails, // Changed 'recipients' to 'email'
         }),
       });
 
@@ -122,7 +122,7 @@ export default function MailCannonForm() {
           Email Sender
         </CardTitle>
         <CardDescription>
-          Enter recipient email addresses to send them a message.
+          Enter recipient email addresses to send them a message. The backend URL is fixed.
         </CardDescription>
       </CardHeader>
       <CardContent>
