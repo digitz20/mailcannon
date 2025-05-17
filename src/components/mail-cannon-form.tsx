@@ -30,12 +30,14 @@ const formSchema = z.object({
 
 type MailCannonFormValues = z.infer<typeof formSchema>;
 
+const DEFAULT_BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendemail";
+
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [backendUrl, setBackendUrl, backendUrlHydrated] = usePersistedState<string>(
     "mailCannonBackendUrl",
-    ""
+    DEFAULT_BACKEND_URL // Use the default URL here
   );
 
   const form = useForm<MailCannonFormValues>({
@@ -48,9 +50,15 @@ export default function MailCannonForm() {
 
   useEffect(() => {
     if (backendUrlHydrated) {
-      form.setValue("backendUrl", backendUrl, { shouldValidate: true });
+      // If backendUrl from localStorage is empty or not a valid URL (e.g. old data), set to default.
+      // Otherwise, use the one from localStorage.
+      const urlToSet = backendUrl && z.string().url().safeParse(backendUrl).success ? backendUrl : DEFAULT_BACKEND_URL;
+      form.setValue("backendUrl", urlToSet, { shouldValidate: true });
+      if (backendUrl !== urlToSet) { // If we had to fall back to default, update persisted state
+        setBackendUrl(urlToSet);
+      }
     }
-  }, [backendUrl, backendUrlHydrated, form]);
+  }, [backendUrl, backendUrlHydrated, form, setBackendUrl]);
 
   const handleBackendUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -103,7 +111,6 @@ export default function MailCannonForm() {
         },
         body: JSON.stringify({
           recipients: validEmails,
-          // Removed subject and body
         }),
       });
 
@@ -156,7 +163,7 @@ export default function MailCannonForm() {
                   <FormControl>
                     <Textarea
                       placeholder="Enter email addresses, separated by commas, spaces, or newlines..."
-                      className="min-h-[120px] resize-y" // Increased min-height as it's the main input now
+                      className="min-h-[120px] resize-y"
                       {...field}
                     />
                   </FormControl>
@@ -177,7 +184,7 @@ export default function MailCannonForm() {
                   </FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="https://your-backend-url.com/send-email" 
+                      placeholder={DEFAULT_BACKEND_URL}
                       {...field} 
                       value={backendUrlHydrated ? field.value : "Loading..."} 
                       onChange={handleBackendUrlChange}
@@ -205,4 +212,3 @@ export default function MailCannonForm() {
     </Card>
   );
 }
-
