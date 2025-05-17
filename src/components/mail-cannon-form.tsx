@@ -1,3 +1,4 @@
+
 // src/components/mail-cannon-form.tsx
 "use client";
 
@@ -24,8 +25,6 @@ import { Loader2, Send, Settings2 } from "lucide-react";
 
 const formSchema = z.object({
   recipients: z.string().min(1, "At least one recipient is required."),
-  subject: z.string().min(1, "Subject is required."),
-  body: z.string().min(1, "Email body is required."),
   backendUrl: z.string().url("Invalid URL format.").min(1, "Backend URL is required."),
 });
 
@@ -43,8 +42,6 @@ export default function MailCannonForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       recipients: "",
-      subject: "",
-      body: "",
       backendUrl: "", // Initial value, will be updated by useEffect
     },
   });
@@ -106,8 +103,7 @@ export default function MailCannonForm() {
         },
         body: JSON.stringify({
           recipients: validEmails,
-          subject: values.subject,
-          body: values.body,
+          // Removed subject and body
         }),
       });
 
@@ -119,9 +115,9 @@ export default function MailCannonForm() {
       toast({
         title: "Emails Sent!",
         description: `Successfully sent emails to ${validEmails.length} recipient(s).`,
-        className: "bg-green-500 text-white", // Using Tailwind color directly for success, as it's a specific state.
+        className: "bg-green-500 text-white", 
       });
-      form.reset({ ...values, recipients: "", subject: "", body: ""}); // Clear form except backendUrl
+      form.reset({ ...values, recipients: "" }); // Clear recipients, keep backendUrl
     } catch (error) {
       let errorMessage = "Failed to send emails. Please check your backend server and URL.";
       if (error instanceof Error) {
@@ -142,10 +138,10 @@ export default function MailCannonForm() {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Send className="h-6 w-6 text-primary" />
-          Compose Email
+          Email Sender
         </CardTitle>
         <CardDescription>
-          Enter recipient emails, subject, body, and your backend URL to send emails.
+          Enter recipient emails and your backend URL to send emails.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -160,43 +156,13 @@ export default function MailCannonForm() {
                   <FormControl>
                     <Textarea
                       placeholder="Enter email addresses, separated by commas, spaces, or newlines..."
-                      className="min-h-[80px] resize-y"
+                      className="min-h-[120px] resize-y" // Increased min-height as it's the main input now
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
                     Separate multiple email addresses with commas, spaces, or new lines.
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="subject"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subject</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Email Subject" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="body"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email Body</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Write your email content here..."
-                      className="min-h-[200px] resize-y"
-                      {...field}
-                    />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -213,7 +179,7 @@ export default function MailCannonForm() {
                     <Input 
                       placeholder="https://your-backend-url.com/send-email" 
                       {...field} 
-                      value={backendUrlHydrated ? field.value : "Loading..."} // Show loading until hydrated
+                      value={backendUrlHydrated ? field.value : "Loading..."} 
                       onChange={handleBackendUrlChange}
                       disabled={!backendUrlHydrated}
                     />
@@ -239,3 +205,4 @@ export default function MailCannonForm() {
     </Card>
   );
 }
+
