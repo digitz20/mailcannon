@@ -27,7 +27,7 @@ const formSchema = z.object({
 
 type MailCannonFormValues = z.infer<typeof formSchema>;
 
-const HARDCODED_BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendemail";
+const HARDCODED_BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendmail";
 
 export default function MailCannonForm() {
   const { toast } = useToast();
@@ -84,7 +84,7 @@ export default function MailCannonForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: validEmails, // Changed 'recipients' to 'email'
+          email: validEmails, 
         }),
       });
 
