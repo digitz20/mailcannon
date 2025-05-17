@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Trash2 } from "lucide-react"; // Added Trash2
 
 const formSchema = z.object({
   recipients: z.string().min(1, "At least one recipient is required."),
@@ -93,7 +93,6 @@ export default function MailCannonForm() {
         try {
           errorData = await response.json();
         } catch (jsonError) {
-          // If response is not JSON, try to get text
           const errorText = await response.text();
           throw new Error(errorText || `Request failed with status ${response.status} and no JSON error body.`);
         }
@@ -105,7 +104,7 @@ export default function MailCannonForm() {
         description: `Successfully sent emails to ${validEmails.length} recipient(s).`,
         className: "bg-green-500 text-white", 
       });
-      form.reset({ recipients: "" }); // Clear recipients
+      form.reset({ recipients: "" }); 
     } catch (error) {
       let errorMessage = "Failed to send emails. Please check your backend server and network connection.";
       if (error instanceof Error) {
@@ -120,6 +119,14 @@ export default function MailCannonForm() {
       setLoading(false);
     }
   }
+
+  const handleClearInputs = () => {
+    form.reset({ recipients: "" });
+    toast({
+      title: "Inputs Cleared",
+      description: "The recipient field has been cleared.",
+    });
+  };
 
   return (
     <Card className="w-full shadow-xl">
@@ -155,14 +162,26 @@ export default function MailCannonForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={loading}>
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              Send Emails
-            </Button>
+            <div className="space-y-3">
+              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={loading}>
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Send Emails
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleClearInputs}
+                disabled={loading}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear Inputs
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>
