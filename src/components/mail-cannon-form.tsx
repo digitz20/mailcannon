@@ -89,7 +89,14 @@ export default function MailCannonForm() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (jsonError) {
+          // If response is not JSON, try to get text
+          const errorText = await response.text();
+          throw new Error(errorText || `Request failed with status ${response.status} and no JSON error body.`);
+        }
         throw new Error(errorData.message || `Request failed with status ${response.status}`);
       }
 
@@ -100,7 +107,7 @@ export default function MailCannonForm() {
       });
       form.reset({ recipients: "" }); // Clear recipients
     } catch (error) {
-      let errorMessage = "Failed to send emails. Please check your backend server.";
+      let errorMessage = "Failed to send emails. Please check your backend server and network connection.";
       if (error instanceof Error) {
         errorMessage = error.message;
       }
