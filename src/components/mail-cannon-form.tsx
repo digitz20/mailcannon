@@ -133,7 +133,7 @@ export default function MailCannonForm() {
 
       toast({
         title: "Sending Complete!",
-        description: `Successfully sent emails to ${validEmails.length} recipient(s).`,
+        description: `Successfully attempted to send emails to ${validEmails.length} recipient(s).`,
         className: "bg-green-500 text-white", 
       });
       form.reset({ recipients: "" }); 
@@ -142,11 +142,20 @@ export default function MailCannonForm() {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      toast({
-        variant: "destructive",
-        title: "Error Sending Emails",
-        description: errorMessage,
-      });
+
+      if (errorMessage.toLowerCase().includes("limit exceeded")) {
+        toast({
+          variant: "destructive",
+          title: "Daily Email Limit Exceeded",
+          description: "You have reached your daily email sending limit. Please try again later or contact support.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error Sending Emails",
+          description: errorMessage,
+        });
+      }
     } finally {
       setLoading(false);
     }
