@@ -18,8 +18,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { Loader2, Send, Trash2 } from "lucide-react"; // Added Trash2
+import { useState, useEffect } from "react";
+import { Loader2, Send, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 
 const formSchema = z.object({
   recipients: z.string().min(1, "At least one recipient is required."),
@@ -32,6 +32,9 @@ const HARDCODED_BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendmail";
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [liveValidEmailCount, setLiveValidEmailCount] = useState(0);
+  const [liveTotalEmailCount, setLiveTotalEmailCount] = useState(0);
+
 
   const form = useForm<MailCannonFormValues>({
     resolver: zodResolver(formSchema),
@@ -39,6 +42,24 @@ export default function MailCannonForm() {
       recipients: "",
     },
   });
+
+  const recipientsValue = form.watch("recipients");
+
+  useEffect(() => {
+    const rawEmails = recipientsValue
+      .split(/[\s,;\n]+/)
+      .map((e) => e.trim())
+      .filter((e) => e);
+    
+    let currentValidCount = 0;
+    rawEmails.forEach(email => {
+      if (z.string().email().safeParse(email).success) {
+        currentValidCount++;
+      }
+    });
+    setLiveValidEmailCount(currentValidCount);
+    setLiveTotalEmailCount(rawEmails.length);
+  }, [recipientsValue]);
 
   async function onSubmit(values: MailCannonFormValues) {
     setLoading(true);
@@ -71,7 +92,7 @@ export default function MailCannonForm() {
       toast({
         variant: "destructive",
         title: "No Valid Recipients",
-        description: "Please provide at least one valid email address.",
+        description: "Please provide at least one valid email address to send.",
       });
       setLoading(false);
       return;
@@ -90,17 +111,28 @@ export default function MailCannonForm() {
 
       if (!response.ok) {
         let errorData;
+        let errorText = `Request failed with status ${response.status}`;
         try {
           errorData = await response.json();
+          if (errorData && errorData.message) {
+            errorText = errorData.message;
+          } else {
+             const textResponse = await response.text();
+             errorText = textResponse || errorText;
+          }
         } catch (jsonError) {
-          const errorText = await response.text();
-          throw new Error(errorText || `Request failed with status ${response.status} and no JSON error body.`);
+           try {
+            const textResponse = await response.text();
+            errorText = textResponse || errorText;
+          } catch (textError) {
+            // Keep the original status code error
+          }
         }
-        throw new Error(errorData.message || `Request failed with status ${response.status}`);
+        throw new Error(errorText);
       }
 
       toast({
-        title: "Emails Sent!",
+        title: "Sending Complete!",
         description: `Successfully sent emails to ${validEmails.length} recipient(s).`,
         className: "bg-green-500 text-white", 
       });
@@ -158,18 +190,32 @@ export default function MailCannonForm() {
                   <FormDescription>
                     Separate multiple email addresses with commas, spaces, or new lines.
                   </FormDescription>
+                  {recipientsValue && recipientsValue.trim().length > 0 && (
+                    <div className="mt-2 text-sm space-y-1">
+                      <div className={`flex items-center gap-1.5 ${liveValidEmailCount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        <CheckCircle className="h-4 w-4" />
+                        <span>{liveValidEmailCount} valid email(s) will be processed.</span>
+                      </div>
+                      {liveTotalEmailCount > liveValidEmailCount && (
+                         <div className="flex items-center gap-1.5 text-amber-600">
+                           <AlertTriangle className="h-4 w-4" />
+                           <span>{liveTotalEmailCount - liveValidEmailCount} invalid or malformed entry/entries.</span>
+                         </div>
+                      )}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
             <div className="space-y-3">
-              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={loading}>
+              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={loading || liveValidEmailCount === 0}>
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="mr-2 h-4 w-4" />
                 )}
-                Send Emails
+                Send to {liveValidEmailCount > 0 ? `${liveValidEmailCount} ` : ''}Recipient(s)
               </Button>
               <Button 
                 type="button" 
@@ -188,3 +234,4 @@ export default function MailCannonForm() {
     </Card>
   );
 }
+
