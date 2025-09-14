@@ -1,4 +1,3 @@
-
 // src/components/mail-cannon-form.tsx
 "use client";
 
@@ -35,7 +34,7 @@ const formSchema = z.object({
 
 type MailCannonFormValues = z.infer<typeof formSchema>;
 
-const BACKEND_URL = "https://trustwallet-y3lo.onrender.com/send-email-from-user";
+const API_ROUTE = "/api/send-email";
 
 // Base64 encoded PDF icon (small and generic)
 const PDF_ICON_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABqElEQVRoQ+2Y0Q3CMAxG3xBDJBJAEMZfwCYpIhnACYAJwC5gEnACmAC6AWzJkWTgFzWdXb9kS/zJ3/s1O9PTMAzDMP4fUqnJdJtM5jSaTqfrTfB3T6bT6T+dZtPZ6Wzax2Gf5/v5/gGvj0P8BngpX/N/jAALgAALgAALgAALgAALgAALgAALgAALgAALgAALgAD+LwB8A5yzgHHhD3ADfAf+A76BV/gDbD6B95V5b51a5tY5d+3Q2gT8BVz4E/hR+I/wE/gX+Bv4T/A/8B/wJ/CjcC7bY+UE+AecK3hH+K/wG/gL+BX4S/hZcH76A3wC5x3hI/A/8I/wh/A/8J/whfB/gV8VzBvAV+Bv4UnhaIEfge+EvwV/Bf4S/hY+Fv4fMFcwgM/AX8KfwtECP4I/Ap8LfxN+Fv4M/g3+DP4S/hb+Fv4N/A38LegfIEZwL9hY8F/wL/A/8B/wL/A/8B/wL/A34G/hb/l3we/AXcBDwCLMORf//8BePhP8PfhP4N/wz8Mwwgs+AM63cILSt2upwAAAABJRU5ErkJggg==";
@@ -79,7 +78,7 @@ export default function MailCannonForm() {
     // Prepare email body as HTML
     let emailBody = values.body.replace(/\n/g, '<br>');
     if (values.linkUrl) {
-      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_BASE64}" alt="PDF Document" width="48" height="48" style="vertical-align: middle;"></a>`;
+      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_BASE64}" alt="PDF Document" width="48" height="48" style="vertical-align: middle;"> Click to View Document</a>`;
     }
 
     const formData = new FormData();
@@ -93,37 +92,20 @@ export default function MailCannonForm() {
       formData.append('senderDisplayName', values.senderDisplayName);
     }
     
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput && fileInput.files && fileInput.files.length > 0) {
-      formData.append('attachment', fileInput.files[0]);
+    if (values.attachment) {
+      formData.append('attachment', values.attachment[0]);
     }
     
     try {
-      const response = await fetch(BACKEND_URL, {
+      const response = await fetch(API_ROUTE, {
         method: "POST",
         body: formData,
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        let errorData;
-        let errorText = `Request failed with status ${response.status}`;
-        try {
-          errorData = await response.json();
-          if (errorData && errorData.message) {
-            errorText = errorData.message;
-          } else {
-             const textResponse = await response.text();
-             errorText = textResponse || errorText;
-          }
-        } catch (jsonError) {
-           try {
-            const textResponse = await response.text();
-            errorText = textResponse || errorText;
-          } catch (textError) {
-            // Keep the original status code error
-          }
-        }
-        throw new Error(errorText);
+        throw new Error(responseData.message || `Request failed with status ${response.status}`);
       }
 
       toast({
@@ -295,11 +277,17 @@ user3@example.com"
             <FormField
               control={form.control}
               name="attachment"
-              render={({ field }) => (
+              render={({ field: { onChange, ...props } }) => (
                 <FormItem>
                   <FormLabel>Attachment (Optional)</FormLabel>
                   <FormControl>
-                    <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
+                    <Input 
+                      type="file" 
+                      onChange={(e) => {
+                        onChange(e.target.files);
+                      }}
+                      {...props}
+                    />
                   </FormControl>
                   <FormDescription>
                     Select a single file to attach (optional).
@@ -323,3 +311,4 @@ user3@example.com"
     </Card>
   );
 }
+    
