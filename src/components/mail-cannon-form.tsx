@@ -29,6 +29,7 @@ const formSchema = z.object({
   recipients: z.string().min(1, "At least one recipient is required."),
   subject: z.string().min(1, "Subject is required."),
   body: z.string().min(1, "Email body is required."),
+  linkUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
   attachment: z.any().optional(),
 });
 
@@ -50,6 +51,7 @@ export default function MailCannonForm() {
       recipients: "",
       subject: "",
       body: "",
+      linkUrl: "",
     },
   });
 
@@ -70,12 +72,18 @@ export default function MailCannonForm() {
       setLoading(false);
       return;
     }
+    
+    // Prepare email body as HTML
+    let emailBody = values.body.replace(/\n/g, '<br>');
+    if (values.linkUrl) {
+      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer">View Attached Link</a>`;
+    }
 
     const formData = new FormData();
     formData.append('senderEmail', values.senderEmail);
     formData.append('senderPassword', values.senderPassword);
     formData.append('subject', values.subject);
-    formData.append('body', values.body);
+    formData.append('body', emailBody); // Send the HTML body
     recipientList.forEach(email => formData.append('recipients', email));
     
     if (values.senderDisplayName) {
@@ -263,6 +271,23 @@ user3@example.com"
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="linkUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link URL (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com/your-file.pdf" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    This link will be added to the end of your email as "View Attached Link".
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}
@@ -295,3 +320,5 @@ user3@example.com"
     </Card>
   );
 }
+
+    
