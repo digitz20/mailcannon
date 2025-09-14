@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Trust Sender',
+  title: 'MailCannon',
   description: 'Send multiple emails with ease.',
 };
 

@@ -9,7 +9,7 @@ export default function Home() {
         <MailCannonForm />
       </main>
       <footer className="mt-12 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Trust Sender. Blast off your messages!</p>
+        <p>&copy; {new Date().getFullYear()} MailCannon. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -15,98 +15,82 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { Loader2, Send, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Send, Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
+  senderEmail: z.string().email("Invalid email address."),
+  senderPassword: z.string().min(1, "Sender password is required."),
+  senderDisplayName: z.string().optional(),
   recipients: z.string().min(1, "At least one recipient is required."),
+  subject: z.string().min(1, "Subject is required."),
+  body: z.string().min(1, "Email body is required."),
+  attachment: z.any().optional(),
 });
 
 type MailCannonFormValues = z.infer<typeof formSchema>;
 
-const HARDCODED_BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendmail";
+const BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendmail";
 
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [liveValidEmailCount, setLiveValidEmailCount] = useState(0);
-  const [liveTotalEmailCount, setLiveTotalEmailCount] = useState(0);
-
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<MailCannonFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      senderEmail: "",
+      senderPassword: "",
+      senderDisplayName: "",
       recipients: "",
+      subject: "",
+      body: "",
     },
   });
 
-  const recipientsValue = form.watch("recipients");
-
-  useEffect(() => {
-    const rawEmails = recipientsValue
-      .split(/[\s,;\n]+/)
-      .map((e) => e.trim())
-      .filter((e) => e);
-    
-    let currentValidCount = 0;
-    rawEmails.forEach(email => {
-      if (z.string().email().safeParse(email).success) {
-        currentValidCount++;
-      }
-    });
-    setLiveValidEmailCount(currentValidCount);
-    setLiveTotalEmailCount(rawEmails.length);
-  }, [recipientsValue]);
-
-  async function onSubmit(values: MailCannonFormValues) {
+  const onSubmit = async (values: MailCannonFormValues) => {
     setLoading(true);
 
-    const rawEmails = values.recipients
-      .split(/[\s,;\n]+/)
-      .map((e) => e.trim())
-      .filter((e) => e);
-    
-    const validEmails: string[] = [];
-    const invalidEmails: string[] = [];
+    const recipientList = values.recipients
+      .split(/[\n\s,;]+/)
+      .map(email => email.trim())
+      .filter(email => z.string().email().safeParse(email).success);
 
-    rawEmails.forEach(email => {
-      if (z.string().email().safeParse(email).success) {
-        validEmails.push(email);
-      } else {
-        invalidEmails.push(email);
-      }
-    });
-
-    if (invalidEmails.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Email Addresses",
-        description: `The following emails are invalid and were not included: ${invalidEmails.join(", ")}. Please correct them.`,
-      });
-    }
-
-    if (validEmails.length === 0) {
+    if (recipientList.length === 0) {
       toast({
         variant: "destructive",
         title: "No Valid Recipients",
-        description: "Please provide at least one valid email address to send.",
+        description: "Please enter at least one valid recipient email address.",
       });
       setLoading(false);
       return;
     }
 
+    const formData = new FormData();
+    formData.append('senderEmail', values.senderEmail);
+    formData.append('senderPassword', values.senderPassword);
+    formData.append('subject', values.subject);
+    formData.append('body', values.body);
+    recipientList.forEach(email => formData.append('recipients', email));
+    
+    if (values.senderDisplayName) {
+      formData.append('senderDisplayName', values.senderDisplayName);
+    }
+    
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      formData.append('attachment', fileInput.files[0]);
+    }
+    
     try {
-      const response = await fetch(HARDCODED_BACKEND_URL, {
+      const response = await fetch(BACKEND_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: validEmails, 
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -132,41 +116,21 @@ export default function MailCannonForm() {
       }
 
       toast({
-        title: "Sending Complete!",
-        description: `Successfully attempted to send emails to ${validEmails.length} recipient(s).`,
-        className: "bg-green-500 text-white", 
+        title: "Email(s) Sent!",
+        description: `Successfully sent email to ${recipientList.length} recipient(s).`,
+        className: "bg-green-500 text-white",
       });
-      form.reset({ recipients: "" }); 
+      form.reset();
     } catch (error) {
-      let errorMessage = "Failed to send emails. Please check your backend server and network connection.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      if (errorMessage.toLowerCase().includes("limit exceeded")) {
-        toast({
-          variant: "destructive",
-          title: "Daily Email Limit Exceeded",
-          description: "You have reached your daily email sending limit. Please try again later or contact support.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error Sending Emails",
-          description: errorMessage,
-        });
-      }
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({
+        variant: "destructive",
+        title: "Error Sending Email",
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
-  }
-
-  const handleClearInputs = () => {
-    form.reset({ recipients: "" });
-    toast({
-      title: "Inputs Cleared",
-      description: "The recipient field has been cleared.",
-    });
   };
 
   return (
@@ -174,15 +138,77 @@ export default function MailCannonForm() {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Send className="h-6 w-6 text-primary" />
-          Email Sender
+          Compose Email
         </CardTitle>
         <CardDescription>
-          Enter recipient email addresses to send them a message. The backend URL is fixed.
+          Fill in the details below to send your email. Provide sender credentials and display name for each send operation.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="senderEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sender Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="your-email@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="senderPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sender Password/App Passkey</FormLabel>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter sender password or app passkey"
+                          {...field}
+                        />
+                      </FormControl>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    <FormDescription>
+                     Use your email password or an app-specific password if 2FA is enabled.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="senderDisplayName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sender Display Name (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your Name or Company Name" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    The name recipients will see as the sender.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="recipients"
@@ -191,56 +217,81 @@ export default function MailCannonForm() {
                   <FormLabel>Recipients</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter email addresses, separated by commas, spaces, or newlines..."
-                      className="min-h-[120px] resize-y"
+                      placeholder="user1@example.com
+user2@example.com
+user3@example.com"
+                      className="min-h-[100px] resize-y"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Separate multiple email addresses with commas, spaces, or new lines.
+                   <FormDescription>
+                    Enter recipient email addresses, one per line.
                   </FormDescription>
-                  {recipientsValue && recipientsValue.trim().length > 0 && (
-                    <div className="mt-2 text-sm space-y-1">
-                      <div className={`flex items-center gap-1.5 ${liveValidEmailCount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        <CheckCircle className="h-4 w-4" />
-                        <span>{liveValidEmailCount} valid email(s) will be processed.</span>
-                      </div>
-                      {liveTotalEmailCount > liveValidEmailCount && (
-                         <div className="flex items-center gap-1.5 text-amber-600">
-                           <AlertTriangle className="h-4 w-4" />
-                           <span>{liveTotalEmailCount - liveValidEmailCount} invalid or malformed entry/entries.</span>
-                         </div>
-                      )}
-                    </div>
-                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="space-y-3">
-              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={loading || liveValidEmailCount === 0}>
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Send to {liveValidEmailCount > 0 ? `${liveValidEmailCount} ` : ''}Recipient(s)
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full" 
-                onClick={handleClearInputs}
-                disabled={loading}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Inputs
-              </Button>
-            </div>
+
+            <FormField
+              control={form.control}
+              name="subject"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subject</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Email Subject" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="body"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Body</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Write your email content here..."
+                      className="min-h-[150px] resize-y"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="attachment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Attachment (Optional)</FormLabel>
+                  <FormControl>
+                    <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
+                  </FormControl>
+                  <FormDescription>
+                    Select a single file to attach (optional).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send Email(s)
+            </Button>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
 }
-

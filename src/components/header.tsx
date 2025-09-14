@@ -7,7 +7,7 @@ export default function Header() {
       <div className="inline-flex items-center justify-center gap-3 rounded-lg bg-card p-4 shadow-md">
         <Rocket size={48} className="text-primary" />
         <h1 className="text-5xl font-bold text-primary">
-          Trust Sender
+          MailCannon
         </h1>
       </div>
       <p className="text-muted-foreground mt-3 text-lg">
