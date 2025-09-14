@@ -138,7 +138,7 @@ export default function MailCannonForm() {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Send className="h-6 w-6 text-primary" />
-          Compose Email
+          MailCannon
         </CardTitle>
         <CardDescription>
           Fill in the details below to send your email. Provide sender credentials and display name for each send operation.
