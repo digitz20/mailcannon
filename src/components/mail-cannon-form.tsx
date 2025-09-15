@@ -56,6 +56,7 @@ export default function MailCannonForm() {
       body: "",
       linkUrl: "",
       documentUrl: "",
+      attachment: undefined,
     },
   });
 
@@ -253,7 +254,9 @@ export default function MailCannonForm() {
                   <FormLabel>Recipients</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="user1@example.com\nuser2@example.com\nuser3@example.com"
+                      placeholder="user1@example.com
+user2@example.com
+user3@example.com"
                       className="min-h-[100px] resize-y"
                       {...field}
                     />
@@ -335,7 +338,7 @@ export default function MailCannonForm() {
             <FormField
               control={form.control}
               name="attachment"
-              render={({ field: { onChange, ...props } }) => (
+              render={({ field: { onChange, value, ...props } }) => (
                 <FormItem>
                   <FormLabel>Attachment (Optional)</FormLabel>
                   <FormControl>
