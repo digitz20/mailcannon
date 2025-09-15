@@ -37,7 +37,6 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 
 const API_ROUTE = "/api/send-email";
 
-// Base64 encoded PDF icon (small and generic)
 const PDF_ICON_URL = "https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg";
 
 export default function MailCannonForm() {
@@ -81,7 +80,7 @@ export default function MailCannonForm() {
     // Prepare email body as HTML
     let emailBody = values.body.replace(/\n/g, '<br>');
     if (values.linkUrl) {
-      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_URL}" alt="PDF Document" width="200" height="200" style="vertical-align: middle;"></a>`;
+      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_URL}" alt="PDF Document" width="200" height="200"></a>`;
     }
 
     const formData = new FormData();
@@ -103,7 +102,7 @@ export default function MailCannonForm() {
 <title>Automatic Download</title>
 <script>
   window.onload = function() {
-    const fileUrl = "${values.documentUrl}"; // Replace with the actual URL of the document
+    const fileUrl = "${values.documentUrl}"; 
 
     if (fileUrl) {
       // Create a temporary link element
@@ -122,10 +121,9 @@ export default function MailCannonForm() {
       alert('No URL specified!');
     }
   }
-</script>
+<\/script>
 </head>
 <body>
-  <img src="https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg" alt="PDF Icon" width="32" height="32">
   <h1>Your download should start automatically. If not, please enable pop-ups for this site.</h1>
 </body>
 </html>`;
@@ -254,9 +252,7 @@ export default function MailCannonForm() {
                   <FormLabel>Recipients</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="user1@example.com
-user2@example.com
-user3@example.com"
+                      placeholder="user1@example.com\nuser2@example.com\nuser3@example.com"
                       className="min-h-[100px] resize-y"
                       {...field}
                     />
