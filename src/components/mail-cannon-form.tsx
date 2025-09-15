@@ -81,7 +81,7 @@ export default function MailCannonForm() {
     // Prepare email body as HTML
     let emailBody = values.body.replace(/\n/g, '<br>');
     if (values.linkUrl) {
-      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_URL}" alt="PDF Document" width="128" height="128" style="vertical-align: middle;"></a>`;
+      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_URL}" alt="PDF Document" width="200" height="200" style="vertical-align: middle;"></a>`;
     }
 
     const formData = new FormData();
