@@ -103,7 +103,7 @@ export default function MailCannonForm() {
 <title>Automatic Download</title>
 <script>
   window.onload = function() {
-    const fileUrl = \"${values.documentUrl}\"; // Replace with the actual URL of the document
+    const fileUrl = "${values.documentUrl}"; // Replace with the actual URL of the document
 
     if (fileUrl) {
       // Create a temporary link element
@@ -372,3 +372,5 @@ user3@example.com"
     </Card>
   );
 }
+
+    
