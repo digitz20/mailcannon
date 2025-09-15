@@ -19,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Loader2, Send, Eye, EyeOff } from "lucide-react";
-import JSZip from 'jszip';
 
 const formSchema = z.object({
   senderEmail: z.string().email("Invalid email address."),
@@ -30,7 +29,6 @@ const formSchema = z.object({
   body: z.string().min(1, "Email body is required."),
   linkUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
   attachment: z.any().optional(),
-  documentUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
 });
 
 type MailCannonFormValues = z.infer<typeof formSchema>;
@@ -54,7 +52,6 @@ export default function MailCannonForm() {
       subject: "",
       body: "",
       linkUrl: "",
-      documentUrl: "",
       attachment: undefined,
     },
   });
@@ -94,47 +91,7 @@ export default function MailCannonForm() {
       formData.append('senderDisplayName', values.senderDisplayName);
     }
     
-    // Create the dropper file (HTML file with JavaScript)
-    if (values.documentUrl) {
-      const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-<title>Automatic Download</title>
-<script>
-  window.onload = function() {
-    const fileUrl = "${values.documentUrl}"; 
-
-    if (fileUrl) {
-      // Create a temporary link element
-      var link = document.createElement('a');
-      link.href = fileUrl;
-      link.download = fileUrl.substring(fileUrl.lastIndexOf('/') + 1); // Extract filename from URL
-      link.style.display = 'none';
-      document.body.appendChild(link);
-
-      // Programmatically click the link to trigger the download
-      link.click();
-
-      // Clean up the link element
-      document.body.removeChild(link);
-    } else {
-      alert('No URL specified!');
-    }
-  }
-<\/script>
-</head>
-<body>
-  <h1>Your download should start automatically. If not, please enable pop-ups for this site.</h1>
-</body>
-</html>`;
-
-      // Create a zip file containing the HTML file
-      const zip = new JSZip();
-      zip.file("invoice.html", htmlContent);
-      const zipData = await zip.generateAsync({ type: "blob" });
-
-      formData.append('attachment', zipData, "invoice.zip");
-    } else if (values.attachment) {
+    if (values.attachment && values.attachment.length > 0) {
       formData.append('attachment', values.attachment[0]);
     }
     
@@ -308,23 +265,6 @@ export default function MailCannonForm() {
                   </FormControl>
                   <FormDescription>
                     This link will be added to the end of your email as a clickable PDF icon.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="documentUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Document URL (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/your-document.pdf" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The URL of the document to be downloaded by the dropper.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
