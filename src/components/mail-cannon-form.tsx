@@ -77,82 +77,95 @@ export default function MailCannonForm() {
       return;
     }
     
-    // Prepare email body as HTML
-    let emailBody = '';
+    let successCount = 0;
+    let errorCount = 0;
+    let lastErrorMessage = "";
+    
     const useLinkTemplate = !!values.linkUrl;
 
-    if (useLinkTemplate) {
-      const recipientName = recipientList.length === 1 ? recipientList[0].split('@')[0] : 'there';
-      const senderName = values.senderDisplayName || 'The Sender';
-      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    await Promise.all(recipientList.map(async (recipientEmail) => {
+        let emailBody = '';
 
-      emailBody = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center;">
-          <img src="${LOGO_URL}" alt="Company Logo" width="150" style="border:0; max-width: 100%; margin-bottom: 20px;">
-          <div style="text-align: left;">
-            <p>Dear ${recipientName},</p>
-            <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
-            <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
-            <div style="margin: 20px 0; text-align: center;">
-              <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
-                <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
-              </a>
-            </div>
-            <p>Best regards,</p>
-            <p><strong>${senderName}</strong></p>
-            <p><em>${today}</em></p>
-          </div>
-        </div>
-      `;
-    } else {
-      // Use the standard body from the form
-      emailBody = (values.body || '').replace(/\n/g, '<br>');
-    }
+        if (useLinkTemplate) {
+            const recipientName = recipientEmail.split('@')[0];
+            const senderName = values.senderDisplayName || 'The Sender';
+            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+            emailBody = `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center;">
+                    <img src="${LOGO_URL}" alt="Company Logo" width="150" style="border:0; max-width: 100%; margin-bottom: 20px;">
+                    <div style="text-align: left;">
+                        <p>Dear ${recipientName},</p>
+                        <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
+                        <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
+                        <div style="margin: 20px 0; text-align: center;">
+                            <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
+                                <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
+                            </a>
+                        </div>
+                        <p>Best regards,</p>
+                        <p><strong>${senderName}</strong></p>
+                        <p><em>${today}</em></p>
+                    </div>
+                </div>
+            `;
+        } else {
+            emailBody = (values.body || '').replace(/\n/g, '<br>');
+        }
 
-    const formData = new FormData();
-    formData.append('senderEmail', values.senderEmail);
-    formData.append('senderPassword', values.senderPassword);
-    formData.append('subject', values.subject);
-    formData.append('body', emailBody); // Send the HTML body
-    recipientList.forEach(email => formData.append('recipients', email));
+        const formData = new FormData();
+        formData.append('senderEmail', values.senderEmail);
+        formData.append('senderPassword', values.senderPassword);
+        formData.append('subject', values.subject);
+        formData.append('body', emailBody);
+        formData.append('recipients', recipientEmail);
+
+        if (values.senderDisplayName) {
+            formData.append('senderDisplayName', values.senderDisplayName);
+        }
+
+        if (!useLinkTemplate && values.attachment && values.attachment.length > 0) {
+            formData.append('attachment', values.attachment[0]);
+        }
+        
+        try {
+            const response = await fetch(API_ROUTE, {
+                method: "POST",
+                body: formData,
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(responseData.message || `Request failed with status ${response.status}`);
+            }
+            successCount++;
+        } catch (error) {
+            errorCount++;
+            lastErrorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        }
+    }));
     
-    if (values.senderDisplayName) {
-      formData.append('senderDisplayName', values.senderDisplayName);
-    }
-    
-    // Only add attachment if we are NOT using the link template
-    if (!useLinkTemplate && values.attachment && values.attachment.length > 0) {
-      formData.append('attachment', values.attachment[0]);
-    }
-    
-    try {
-      const response = await fetch(API_ROUTE, {
-        method: "POST",
-        body: formData,
-      });
+    setLoading(false);
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || `Request failed with status ${response.status}`);
-      }
-
+    if (successCount > 0) {
       toast({
         title: "Email(s) Sent!",
-        description: `Successfully sent email to ${recipientList.length} recipient(s).`,
+        description: `Successfully sent email to ${successCount} of ${recipientList.length} recipient(s).`,
         className: "bg-green-500 text-white",
       });
-      form.reset();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
+    }
+
+    if (errorCount > 0) {
+       toast({
         variant: "destructive",
-        title: "Error Sending Email",
-        description: errorMessage,
+        title: "Some Emails Failed",
+        description: `Failed to send to ${errorCount} recipient(s). Last error: ${lastErrorMessage}`,
       });
-    } finally {
-      setLoading(false);
+    }
+
+    if (errorCount === 0) {
+      form.reset();
     }
   };
 
@@ -344,3 +357,4 @@ export default function MailCannonForm() {
   );
 }
 
+    
