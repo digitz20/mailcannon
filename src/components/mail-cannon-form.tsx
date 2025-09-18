@@ -79,6 +79,8 @@ export default function MailCannonForm() {
     let emailBody = '';
 
     if (values.linkUrl) {
+      // Get recipient name from email if possible
+      const recipientName = recipientList.length === 1 ? recipientList[0].split('@')[0] : 'there';
       // Use the fixed template
       emailBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -86,9 +88,11 @@ export default function MailCannonForm() {
             <img src="${LOGO_URL}" alt="Company Logo" style="max-width: 150px;">
           </div>
           <div style="font-size: 16px; line-height: 1.6;">
-            <p>Hello,</p>
-            <p>[This is where your email content will go. Let me know what it should say!]</p>
-            <p>Please find the document attached below. Click on the icon to view or download.</p>
+            <p>Dear ${recipientName},</p>
+            <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
+            <p>Please find attached the pdf document of our last brief including names and shipment dates and deliveries.</p>
+            <p>Best regards,<br>${values.senderDisplayName || 'The Team'}</p>
+            <p style="font-size: 12px; color: #888;">${new Date().toDateString()}</p>
           </div>
           <div style="text-align: center; margin-top: 30px;">
             <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer">
