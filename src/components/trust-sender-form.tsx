@@ -26,7 +26,8 @@ const formSchema = z.object({
 
 type TrustSenderFormValues = z.infer<typeof formSchema>;
 
-const HARDCODED_BACKEND_URL = "https://trustwallet-y3lo.onrender.com/sendmail";
+const API_ROUTE = "/api/send-email";
+
 
 export default function TrustSenderForm() {
   const { toast } = useToast();
@@ -68,36 +69,25 @@ export default function TrustSenderForm() {
       return;
     }
 
+    const formData = new FormData();
+    // These will be picked up from environment variables on the server
+    // formData.append('senderEmail', "..."); 
+    // formData.append('senderPassword', "...");
+    formData.append('subject', "A Message from Trust Sender");
+    formData.append('body', "This is a system-generated email.");
+    validEmails.forEach(email => formData.append('recipients', email));
+
+
     try {
-      const response = await fetch(HARDCODED_BACKEND_URL, {
+      const response = await fetch(API_ROUTE, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: validEmails,
-        }),
+        body: formData,
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        let errorText = `Request failed with status ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData && errorData.message) {
-            errorText = errorData.message;
-          } else {
-             const textResponse = await response.text();
-             errorText = textResponse || errorText;
-          }
-        } catch (jsonError) {
-           try {
-            const textResponse = await response.text();
-            errorText = textResponse || errorText;
-          } catch (textError) {
-            // Keep the original status code error
-          }
-        }
-        throw new Error(errorText);
+        throw new Error(responseData.message || `Request failed with status ${response.status}`);
       }
 
       toast({
@@ -107,24 +97,12 @@ export default function TrustSenderForm() {
       });
       form.reset({ recipients: "" });
     } catch (error) {
-      let errorMessage = "Failed to send emails. Please check your backend server and network connection.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      if (errorMessage.toLowerCase().includes("limit exceeded")) {
-        toast({
-          variant: "destructive",
-          title: "Daily Email Limit Exceeded",
-          description: "You have reached your daily email sending limit. Please try again later or contact support.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error Sending Emails",
-          description: errorMessage,
-        });
-      }
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({
+        variant: "destructive",
+        title: "Error Sending Emails",
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -138,7 +116,7 @@ export default function TrustSenderForm() {
           Trust Sender
         </CardTitle>
         <CardDescription>
-         Enter recipient emails and send. The backend handles the message content.
+         Enter recipient emails and send. The backend handles credentials and message content.
         </CardDescription>
       </CardHeader>
       <CardContent>

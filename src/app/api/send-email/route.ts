@@ -5,8 +5,10 @@ import nodemailer from 'nodemailer';
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const senderEmail = formData.get('senderEmail') as string;
-    const senderPassword = formData.get('senderPassword') as string;
+    // Use form data or fall back to environment variables
+    const senderEmail = (formData.get('senderEmail') as string) || process.env.SENDER_EMAIL;
+    const senderPassword = (formData.get('senderPassword') as string) || process.env.SENDER_PASSWORD;
+
     const senderDisplayName = formData.get('senderDisplayName') as string | null;
     const recipients = formData.getAll('recipients') as string[];
     const subject = formData.get('subject') as string;
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
     const attachment = formData.get('attachment') as File | null;
 
     if (!senderEmail || !senderPassword || !recipients.length || !subject || !body) {
-      return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ message: 'Missing required fields. Ensure sender credentials are set in environment variables or the form.' }, { status: 400 });
     }
 
     // Determine SMTP settings from sender's email provider
@@ -70,4 +72,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: `Internal Server Error: ${errorMessage}` }, { status: 500 });
   }
 }
-    
