@@ -36,8 +36,7 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 
 const API_ROUTE = "/api/send-email";
 
-const PDF_ICON_URL = "https://cdn.iconscout.com/icon/premium/png-256-thumb/pdf-file-format-4439798-3681427.png";
-const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
+const PDF_ICON_URL = "https://cdn.icon-icons.com/icons2/2107/PNG/512/file_type_pdf_icon_130274.png";
 
 
 export default function MailCannonForm() {
@@ -341,4 +340,3 @@ export default function MailCannonForm() {
   );
 }
 
-    
