@@ -85,12 +85,12 @@ export default function MailCannonForm() {
 
     await Promise.all(recipientList.map(async (recipientEmail) => {
         let emailBody = '';
+        const recipientName = recipientEmail.split('@')[0];
+        const senderName = values.senderDisplayName || 'The Sender';
+        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
 
         if (useLinkTemplate) {
-            const recipientName = recipientEmail.split('@')[0];
-            const senderName = values.senderDisplayName || 'The Sender';
-            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
             emailBody = `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center;">
                     <img src="${LOGO_URL}" alt="Company Logo" width="150" style="border:0; max-width: 100%; margin-bottom: 20px;">
@@ -118,7 +118,7 @@ export default function MailCannonForm() {
         formData.append('senderPassword', values.senderPassword);
         formData.append('subject', values.subject);
         formData.append('body', emailBody);
-        formData.append('recipients', recipientEmail);
+        formData.append('recipients', recipientEmail); // Send one recipient at a time
 
         if (values.senderDisplayName) {
             formData.append('senderDisplayName', values.senderDisplayName);
