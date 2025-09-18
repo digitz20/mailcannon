@@ -37,7 +37,6 @@ const API_ROUTE = "/api/send-email";
 
 const PDF_ICON_URL = "https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg";
 const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
-const BACKGROUND_IMAGE_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
 
 
 export default function MailCannonForm() {
@@ -85,8 +84,8 @@ export default function MailCannonForm() {
       const recipientName = recipientList.length === 1 ? recipientList[0].split('@')[0] : 'there';
       // Use the fixed template
       emailBody = `
-        <div style="background-image: url('${BACKGROUND_IMAGE_URL}'); background-size: cover; background-position: center; font-family: Arial, sans-serif;">
-          <div style="backdrop-filter: blur(20px); background-color: rgba(255, 255, 255, 0.7); max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+          <div style="background-color: #ffffff; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="${LOGO_URL}" alt="Company Logo" style="max-width: 150px; border-radius: 8px;">
             </div>
