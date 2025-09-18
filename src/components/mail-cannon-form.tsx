@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
   senderEmail: z.string().email("Please enter a valid email address."),
@@ -42,6 +42,7 @@ const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<MailCannonFormValues>({
     resolver: zodResolver(formSchema),
@@ -193,9 +194,24 @@ export default function MailCannonForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sender Password / App Passkey</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••••••" {...field} />
-                  </FormControl>
+                  <div className="relative">
+                    <FormControl>
+                      <Input 
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••••••" 
+                        {...field}
+                        className="pr-10"
+                      />
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                    </button>
+                  </div>
                   <FormDescription>
                     For providers like Gmail, use an "App Password" if 2FA is enabled.
                   </FormDescription>
