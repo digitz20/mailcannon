@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +36,7 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 
 const API_ROUTE = "/api/send-email";
 
-const PDF_ICON_URL = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
+const PDF_ICON_URL = "https://cdn.iconscout.com/icon/premium/png-256-thumb/pdf-file-format-4439798-3681427.png";
 const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
 
 
@@ -81,27 +82,23 @@ export default function MailCannonForm() {
     const useLinkTemplate = !!values.linkUrl;
 
     if (useLinkTemplate) {
-      // Get recipient name from email if possible
       const recipientName = recipientList.length === 1 ? recipientList[0].split('@')[0] : 'there';
-      // Use the fixed template
+      const senderName = values.senderDisplayName || 'The Sender';
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
       emailBody = `
-        <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-          <div style="background-color: #ffffff; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <img src="${LOGO_URL}" alt="Company Logo" style="max-width: 150px; border-radius: 8px;">
-            </div>
-            <div style="font-size: 16px; line-height: 1.6;">
-              <p>Hello ${recipientName},</p>
-            </div>
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer">
-                <img src="${PDF_ICON_URL}" alt="PDF Document" width="200" height="200" style="border:0;">
-              </a>
-            </div>
-            <div style="text-align: center; font-size: 12px; color: #888; margin-top: 20px;">
-              <p>&copy; ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
-            </div>
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <p>Dear ${recipientName},</p>
+          <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
+          <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
+          <div style="margin: 20px 0; text-align: center;">
+            <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
+              <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
+            </a>
           </div>
+          <p>Best regards,</p>
+          <p><strong>${senderName}</strong></p>
+          <p><em>${today}</em></p>
         </div>
       `;
     } else {
@@ -343,3 +340,5 @@ export default function MailCannonForm() {
     </Card>
   );
 }
+
+    
