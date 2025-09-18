@@ -36,6 +36,7 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 const API_ROUTE = "/api/send-email";
 
 const PDF_ICON_URL = "https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg";
+const LOGO_URL = "https://i.pinimg.com/1200x/bb/4b/ab/bb4babfb2df038b04bc43cd6e7612ef9.jpg";
 
 export default function MailCannonForm() {
   const { toast } = useToast();
@@ -75,10 +76,35 @@ export default function MailCannonForm() {
     }
     
     // Prepare email body as HTML
-    let emailBody = values.body.replace(/\n/g, '<br>');
+    let emailBody = '';
+
     if (values.linkUrl) {
-      emailBody += `<br><br><a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer"><img src="${PDF_ICON_URL}" alt="PDF Document" width="200" height="200"></a>`;
+      // Use the fixed template
+      emailBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${LOGO_URL}" alt="Company Logo" style="max-width: 150px;">
+          </div>
+          <div style="font-size: 16px; line-height: 1.6;">
+            <p>Hello,</p>
+            <p>[This is where your email content will go. Let me know what it should say!]</p>
+            <p>Please find the document attached below. Click on the icon to view or download.</p>
+          </div>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer">
+              <img src="${PDF_ICON_URL}" alt="PDF Document" width="200" height="200" style="border:0;">
+            </a>
+          </div>
+          <div style="text-align: center; font-size: 12px; color: #888; margin-top: 20px;">
+            <p>&copy; ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+          </div>
+        </div>
+      `;
+    } else {
+      // Use the standard body from the form
+      emailBody = values.body.replace(/\n/g, '<br>');
     }
+
 
     const formData = new FormData();
     formData.append('senderEmail', values.senderEmail);
@@ -249,6 +275,9 @@ export default function MailCannonForm() {
                       {...field}
                     />
                   </FormControl>
+                  <FormDescription>
+                    This will be ignored if you provide a "Link URL".
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -264,7 +293,7 @@ export default function MailCannonForm() {
                     <Input placeholder="https://example.com/your-file.pdf" {...field} />
                   </FormControl>
                   <FormDescription>
-                    This link will be added to the end of your email as a clickable PDF icon.
+                    This will add a clickable PDF icon to a templated email.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -287,7 +316,7 @@ export default function MailCannonForm() {
                     />
                   </FormControl>
                   <FormDescription>
-                    Select a single file to attach (optional).
+                    Select a single file to attach (optional). This will be ignored if you provide a "Link URL".
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
