@@ -86,7 +86,7 @@ export default function MailCannonForm() {
       // Use the fixed template
       emailBody = `
         <div style="background-image: url('${BACKGROUND_IMAGE_URL}'); background-size: cover; background-position: center; font-family: Arial, sans-serif;">
-          <div style="backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.7); max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <div style="backdrop-filter: blur(20px); background-color: rgba(255, 255, 255, 0.7); max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="${LOGO_URL}" alt="Company Logo" style="max-width: 150px; border-radius: 8px;">
             </div>
