@@ -69,38 +69,53 @@ export default function TrustSenderForm() {
       return;
     }
 
-    try {
-      const response = await fetch(API_ROUTE, {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          recipients: validEmails, // Send as an array with 'recipients' key
-        }),
-      });
+    let successCount = 0;
+    let errorCount = 0;
+    let lastErrorMessage = "";
 
-      const responseData = await response.json();
+    // Send a request for each email individually
+    await Promise.all(validEmails.map(async (email) => {
+      try {
+        const response = await fetch(API_ROUTE, {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email: email }), // Use the correct format { "email": "..." }
+        });
 
-      if (!response.ok) {
-        throw new Error(responseData.message || `Request failed with status ${response.status}`);
+        if (!response.ok) {
+          const responseData = await response.json().catch(() => ({ message: `Request failed with status ${response.status}` }));
+          throw new Error(responseData.message || `Request failed for ${email}`);
+        }
+        successCount++;
+      } catch (error) {
+        errorCount++;
+        lastErrorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       }
+    }));
 
+
+    setLoading(false);
+
+    if (successCount > 0) {
       toast({
         title: "Sending Complete!",
-        description: `Successfully attempted to send emails to ${validEmails.length} recipient(s).`,
+        description: `Successfully sent emails to ${successCount} of ${validEmails.length} recipient(s).`,
         className: "bg-green-500 text-white",
       });
-      form.reset({ recipients: "" });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
+    }
+    
+    if (errorCount > 0) {
+       toast({
         variant: "destructive",
-        title: "Error Sending Emails",
-        description: errorMessage,
+        title: "Some Emails Failed",
+        description: `Failed to send to ${errorCount} recipient(s). Last error: ${lastErrorMessage}`,
       });
-    } finally {
-      setLoading(false);
+    }
+
+    if (errorCount === 0) {
+      form.reset({ recipients: "" });
     }
   };
 
