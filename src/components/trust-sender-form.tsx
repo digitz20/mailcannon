@@ -76,7 +76,7 @@ export default function TrustSenderForm() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          recipient: validEmails, // Send as an array
+          recipients: validEmails, // Send as an array with 'recipients' key
         }),
       });
 
