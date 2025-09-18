@@ -37,6 +37,7 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 const API_ROUTE = "/api/send-email";
 
 const PDF_ICON_URL = "https://cdn.icon-icons.com/icons2/2107/PNG/512/file_type_pdf_icon_130274.png";
+const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
 
 
 export default function MailCannonForm() {
@@ -86,18 +87,21 @@ export default function MailCannonForm() {
       const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
       emailBody = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Dear ${recipientName},</p>
-          <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
-          <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
-          <div style="margin: 20px 0; text-align: center;">
-            <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
-              <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
-            </a>
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center;">
+          <img src="${LOGO_URL}" alt="Company Logo" width="150" style="border:0; max-width: 100%; margin-bottom: 20px;">
+          <div style="text-align: left;">
+            <p>Dear ${recipientName},</p>
+            <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
+            <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
+            <div style="margin: 20px 0; text-align: center;">
+              <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
+                <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
+              </a>
+            </div>
+            <p>Best regards,</p>
+            <p><strong>${senderName}</strong></p>
+            <p><em>${today}</em></p>
           </div>
-          <p>Best regards,</p>
-          <p><strong>${senderName}</strong></p>
-          <p><em>${today}</em></p>
         </div>
       `;
     } else {
