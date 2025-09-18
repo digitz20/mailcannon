@@ -18,11 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Loader2, Send, Eye, EyeOff } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 
 const formSchema = z.object({
-  senderEmail: z.string().email("Invalid email address."),
-  senderPassword: z.string().min(1, "Sender password is required."),
   senderDisplayName: z.string().optional(),
   recipients: z.string().min(1, "At least one recipient is required."),
   subject: z.string().min(1, "Subject is required."),
@@ -42,13 +40,10 @@ const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<MailCannonFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      senderEmail: "",
-      senderPassword: "",
       senderDisplayName: "",
       recipients: "",
       subject: "",
@@ -115,8 +110,6 @@ export default function MailCannonForm() {
 
 
     const formData = new FormData();
-    formData.append('senderEmail', values.senderEmail);
-    formData.append('senderPassword', values.senderPassword);
     formData.append('subject', values.subject);
     formData.append('body', emailBody); // Send the HTML body
     recipientList.forEach(email => formData.append('recipients', email));
@@ -168,57 +161,12 @@ export default function MailCannonForm() {
           MailCannon
         </CardTitle>
         <CardDescription>
-          Fill in the details below to send your email. Provide sender credentials and display name for each send operation.
+          Fill in the details below to send your email. Sender credentials are securely managed on the server.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="senderEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sender Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="your-email@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="senderPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sender Password/App Passkey</FormLabel>
-                    <div className="relative">
-                      <FormControl>
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter sender password or app passkey"
-                          {...field}
-                        />
-                      </FormControl>
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <FormDescription>
-                     Use your email password or an app-specific password if 2FA is enabled.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
               name="senderDisplayName"
