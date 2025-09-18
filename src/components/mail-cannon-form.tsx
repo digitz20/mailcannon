@@ -78,8 +78,9 @@ export default function MailCannonForm() {
     
     // Prepare email body as HTML
     let emailBody = '';
+    const useLinkTemplate = !!values.linkUrl;
 
-    if (values.linkUrl) {
+    if (useLinkTemplate) {
       // Get recipient name from email if possible
       const recipientName = recipientList.length === 1 ? recipientList[0].split('@')[0] : 'there';
       // Use the fixed template
@@ -124,7 +125,8 @@ export default function MailCannonForm() {
       formData.append('senderDisplayName', values.senderDisplayName);
     }
     
-    if (values.attachment && values.attachment.length > 0) {
+    // Only add attachment if we are NOT using the link template
+    if (!useLinkTemplate && values.attachment && values.attachment.length > 0) {
       formData.append('attachment', values.attachment[0]);
     }
     
