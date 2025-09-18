@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     // Prioritize environment variables, then fall back to form data (if any)
-    const senderEmail = process.env.SENDER_EMAIL || (formData.get('senderEmail') as string);
-    const senderPassword = process.env.SENDER_PASSWORD || (formData.get('senderPassword') as string);
+    const senderEmail = (formData.get('senderEmail') as string) || process.env.SENDER_EMAIL;
+    const senderPassword = (formData.get('senderPassword') as string) || process.env.SENDER_PASSWORD;
 
     const senderDisplayName = formData.get('senderDisplayName') as string | null;
     const recipients = formData.getAll('recipients') as string[];
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const attachment = formData.get('attachment') as File | null;
 
     if (!senderEmail || !senderPassword || !recipients.length || !subject || !body) {
-      return NextResponse.json({ message: 'Missing required fields. Ensure sender credentials are set in environment variables.' }, { status: 400 });
+      return NextResponse.json({ message: 'Missing required fields. Ensure sender credentials are set in environment variables or provided in the form.' }, { status: 400 });
     }
 
     // Determine SMTP settings from sender's email provider
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     
     // Provide more specific feedback for common errors
     if (errorMessage.includes('Invalid login') || errorMessage.includes('Authentication failed')) {
-      return NextResponse.json({ message: 'Authentication failed. Please check your email and password/app passkey in the environment variables.' }, { status: 401 });
+      return NextResponse.json({ message: 'Authentication failed. Please check your email and password/app passkey.' }, { status: 401 });
     }
     if (errorMessage.includes('Missing credentials')) {
       return NextResponse.json({ message: 'Server is missing email credentials configuration.' }, { status: 500 });

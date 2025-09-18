@@ -21,6 +21,8 @@ import { useState } from "react";
 import { Loader2, Send } from "lucide-react";
 
 const formSchema = z.object({
+  senderEmail: z.string().email("Please enter a valid email address."),
+  senderPassword: z.string().min(1, "Password/App Passkey is required."),
   senderDisplayName: z.string().optional(),
   recipients: z.string().min(1, "At least one recipient is required."),
   subject: z.string().min(1, "Subject is required."),
@@ -44,6 +46,8 @@ export default function MailCannonForm() {
   const form = useForm<MailCannonFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      senderEmail: "",
+      senderPassword: "",
       senderDisplayName: "",
       recipients: "",
       subject: "",
@@ -110,6 +114,8 @@ export default function MailCannonForm() {
 
 
     const formData = new FormData();
+    formData.append('senderEmail', values.senderEmail);
+    formData.append('senderPassword', values.senderPassword);
     formData.append('subject', values.subject);
     formData.append('body', emailBody); // Send the HTML body
     recipientList.forEach(email => formData.append('recipients', email));
@@ -161,12 +167,43 @@ export default function MailCannonForm() {
           MailCannon
         </CardTitle>
         <CardDescription>
-          Fill in the details below to send your email. Sender credentials are securely managed on the server.
+          Fill in the details below to send your email. For services like Gmail, an "App Password" may be required instead of your regular password.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             <FormField
+              control={form.control}
+              name="senderEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sender Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="you@your-email.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="senderPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sender Password / App Passkey</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••••••" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    For providers like Gmail, use an "App Password" if 2FA is enabled.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="senderDisplayName"
