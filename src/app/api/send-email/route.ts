@@ -1,3 +1,4 @@
+
 // src/app/api/send-email/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
@@ -10,12 +11,12 @@ export async function POST(req: NextRequest) {
     const senderPassword = (formData.get('senderPassword') as string) || process.env.SENDER_PASSWORD;
 
     const senderDisplayName = formData.get('senderDisplayName') as string | null;
-    const recipients = formData.getAll('recipients') as string[];
+    const recipient = formData.get('recipients') as string; // Expect a single recipient
     const subject = formData.get('subject') as string;
     const body = formData.get('body') as string;
     const attachment = formData.get('attachment') as File | null;
 
-    if (!senderEmail || !senderPassword || !recipients.length || !subject || !body) {
+    if (!senderEmail || !senderPassword || !recipient || !subject || !body) {
       return NextResponse.json({ message: 'Missing required fields. Ensure sender credentials are set in environment variables or provided in the form.' }, { status: 400 });
     }
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const mailOptions: nodemailer.SendMailOptions = {
       from: senderDisplayName ? `"${senderDisplayName}" <${senderEmail}>` : senderEmail,
-      to: recipients.join(', '), // Nodemailer can take a comma-separated string
+      to: recipient, // Nodemailer handles a single recipient string
       subject: subject,
       html: body,
     };
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     await transporter.sendMail(mailOptions);
 
-    return NextResponse.json({ message: 'Emails sent successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Email sent successfully' }, { status: 200 });
 
   } catch (error) {
     console.error('Error sending email:', error);
