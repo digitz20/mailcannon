@@ -35,7 +35,7 @@ type MailCannonFormValues = z.infer<typeof formSchema>;
 
 const API_ROUTE = "/api/send-email";
 
-const PDF_ICON_URL = "https://i.pinimg.com/1200x/37/a1/4e/37a14ee968a6a729725ba69e5c15de22.jpg";
+const PDF_ICON_URL = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
 const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
 
 
@@ -91,11 +91,7 @@ export default function MailCannonForm() {
               <img src="${LOGO_URL}" alt="Company Logo" style="max-width: 150px; border-radius: 8px;">
             </div>
             <div style="font-size: 16px; line-height: 1.6;">
-              <p>Dear ${recipientName},</p>
-              <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
-              <p>Please find attached the pdf document of our last brief including names and shipment dates and deliveries.</p>
-              <p>Best regards,<br>${values.senderDisplayName || 'The Team'}</p>
-              <p style="font-size: 12px; color: #888;">${new Date().toDateString()}</p>
+              <p>Hello ${recipientName},</p>
             </div>
             <div style="text-align: center; margin-top: 30px;">
               <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer">
