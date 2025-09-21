@@ -83,12 +83,11 @@ export default function MailCannonForm() {
     
     const useLinkTemplate = !!values.linkUrl;
 
-    await Promise.all(recipientList.map(async (recipientEmail) => {
+    for (const recipientEmail of recipientList) {
         let emailBody = '';
         const recipientName = recipientEmail.split('@')[0];
         const senderName = values.senderDisplayName || 'The Sender';
         const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
 
         if (useLinkTemplate) {
             emailBody = `
@@ -144,7 +143,7 @@ export default function MailCannonForm() {
             errorCount++;
             lastErrorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         }
-    }));
+    }
     
     setLoading(false);
 
@@ -356,3 +355,5 @@ export default function MailCannonForm() {
     </Card>
   );
 }
+
+    
