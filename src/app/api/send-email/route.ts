@@ -1,75 +1,137 @@
-
 // src/app/api/send-email/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+const PDF_ICON_URL = "https://cdn.icon-icons.com/icons2/2107/PNG/512/file_type_pdf_icon_130274.png";
+const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
+
+// Helper function to introduce a delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    // Prioritize environment variables, then fall back to form data (if any)
-    const senderEmail = (formData.get('senderEmail') as string) || process.env.SENDER_EMAIL;
-    const senderPassword = (formData.get('senderPassword') as string) || process.env.SENDER_PASSWORD;
-
+    const senderEmail = process.env.SENDER_EMAIL || (formData.get('senderEmail') as string);
+    const senderPassword = process.env.SENDER_PASSWORD || (formData.get('senderPassword') as string);
     const senderDisplayName = formData.get('senderDisplayName') as string | null;
-    const recipient = formData.get('recipients') as string; // Expect a single recipient
+    const recipientsJSON = formData.get('recipients') as string;
     const subject = formData.get('subject') as string;
-    const body = formData.get('body') as string;
-    const attachment = formData.get('attachment') as File | null;
 
-    if (!senderEmail || !senderPassword || !recipient || !subject || !body) {
-      return NextResponse.json({ message: 'Missing required fields. Ensure sender credentials are set in environment variables or provided in the form.' }, { status: 400 });
+    // Template-related fields
+    const useLinkTemplate = formData.get('useLinkTemplate') === 'true';
+    const linkUrl = formData.get('linkUrl') as string | null;
+    const body = formData.get('body') as string | null;
+    const attachmentFile = formData.get('attachment') as File | null;
+
+
+    if (!senderEmail || !senderPassword || !recipientsJSON || !subject) {
+      return NextResponse.json({ message: 'Missing required fields.' }, { status: 400 });
     }
 
-    // Determine SMTP settings from sender's email provider
-    let service = 'gmail'; // Default to gmail
-    if (senderEmail.includes('yahoo')) {
-      service = 'yahoo';
-    } else if (senderEmail.includes('outlook') || senderEmail.includes('hotmail')) {
-      service = 'hotmail';
-    } // Add other services as needed
+    const recipients = JSON.parse(recipientsJSON) as string[];
+
+    // Determine SMTP settings
+    let service = 'gmail';
+    if (senderEmail.includes('yahoo')) service = 'yahoo';
+    else if (senderEmail.includes('outlook') || senderEmail.includes('hotmail')) service = 'hotmail';
 
     const transporter = nodemailer.createTransport({
       service: service,
-      auth: {
-        user: senderEmail,
-        pass: senderPassword,
-      },
+      auth: { user: senderEmail, pass: senderPassword },
     });
 
-    const mailOptions: nodemailer.SendMailOptions = {
-      from: senderDisplayName ? `"${senderDisplayName}" <${senderEmail}>` : senderEmail,
-      to: recipient, // Nodemailer handles a single recipient string
-      subject: subject,
-      html: body,
-    };
-
-    if (attachment) {
-      const attachmentBuffer = Buffer.from(await attachment.arrayBuffer());
-      mailOptions.attachments = [
-        {
-          filename: attachment.name,
-          content: attachmentBuffer,
-          contentType: attachment.type,
-        },
-      ];
-    }
-
-    await transporter.sendMail(mailOptions);
-
-    return NextResponse.json({ message: 'Email sent successfully' }, { status: 200 });
+    // Respond to the client immediately
+    // The email sending will continue in the background.
+    sendEmailsInBackground(transporter, {
+        senderEmail,
+        senderDisplayName,
+        recipients,
+        subject,
+        useLinkTemplate,
+        linkUrl,
+        body,
+        attachmentFile,
+    });
+    
+    return NextResponse.json({ message: `Email sending process started for ${recipients.length} recipients.` }, { status: 202 });
 
   } catch (error) {
-    console.error('Error sending email:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    
-    // Provide more specific feedback for common errors
-    if (errorMessage.includes('Invalid login') || errorMessage.includes('Authentication failed')) {
-      return NextResponse.json({ message: 'Authentication failed. Please check your email and password/app passkey.' }, { status: 401 });
-    }
-    if (errorMessage.includes('Missing credentials')) {
-      return NextResponse.json({ message: 'Server is missing email credentials configuration.' }, { status: 500 });
+    console.error('Error handling initial request:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
+    return NextResponse.json({ message: `Error: ${errorMessage}` }, { status: 500 });
+  }
+}
+
+async function sendEmailsInBackground(transporter: nodemailer.Transporter, options: any) {
+    const {
+        senderEmail,
+        senderDisplayName,
+        recipients,
+        subject,
+        useLinkTemplate,
+        linkUrl,
+        body,
+        attachmentFile,
+    } = options;
+
+    let attachmentBuffer: Buffer | null = null;
+    if (attachmentFile && !useLinkTemplate) {
+        attachmentBuffer = Buffer.from(await attachmentFile.arrayBuffer());
     }
 
-    return NextResponse.json({ message: `Internal Server Error: ${errorMessage}` }, { status: 500 });
-  }
+    for (const recipientEmail of recipients) {
+        try {
+            let emailBody = '';
+            const recipientName = recipientEmail.split('@')[0];
+            const senderName = senderDisplayName || 'The Sender';
+            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            if (useLinkTemplate && linkUrl) {
+                emailBody = `
+                    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center;">
+                        <img src="${LOGO_URL}" alt="Company Logo" width="150" style="border:0; max-width: 100%; margin-bottom: 20px;">
+                        <div style="text-align: left;">
+                            <p>Dear ${recipientName},</p>
+                            <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
+                            <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
+                            <div style="margin: 20px 0; text-align: center;">
+                                <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
+                                    <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
+                                </a>
+                            </div>
+                            <p>Best regards,</p>
+                            <p><strong>${senderName}</strong></p>
+                            <p><em>${today}</em></p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                emailBody = (body || '').replace(/\n/g, '<br>');
+            }
+
+            const mailOptions: nodemailer.SendMailOptions = {
+                from: senderDisplayName ? `"${senderDisplayName}" <${senderEmail}>` : senderEmail,
+                to: recipientEmail,
+                subject: subject,
+                html: emailBody,
+            };
+
+            if (attachmentBuffer && attachmentFile) {
+                mailOptions.attachments = [{
+                    filename: attachmentFile.name,
+                    content: attachmentBuffer,
+                    contentType: attachmentFile.type,
+                }];
+            }
+
+            await transporter.sendMail(mailOptions);
+            console.log(`Email sent successfully to ${recipientEmail}`);
+
+            // Add a 1-second delay between emails to avoid rate-limiting
+            await delay(1000); 
+
+        } catch (error) {
+            console.error(`Failed to send email to ${recipientEmail}:`, error);
+        }
+    }
 }

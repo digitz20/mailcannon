@@ -39,7 +39,6 @@ const API_ROUTE = "/api/send-email";
 const PDF_ICON_URL = "https://cdn.icon-icons.com/icons2/2107/PNG/512/file_type_pdf_icon_130274.png";
 const LOGO_URL = "https://i.pinimg.com/1200x/e2/47/08/e247084e32ebc0b6e34262cd37c59fb3.jpg";
 
-
 export default function MailCannonForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -77,94 +76,57 @@ export default function MailCannonForm() {
       return;
     }
     
-    let successCount = 0;
-    let errorCount = 0;
-    let lastErrorMessage = "";
+    const formData = new FormData();
+    formData.append('senderEmail', values.senderEmail);
+    formData.append('senderPassword', values.senderPassword);
+    formData.append('subject', values.subject);
     
-    const useLinkTemplate = !!values.linkUrl;
+    // Send the full list of recipients
+    formData.append('recipients', JSON.stringify(recipientList)); 
 
-    for (const recipientEmail of recipientList) {
-        let emailBody = '';
-        const recipientName = recipientEmail.split('@')[0];
-        const senderName = values.senderDisplayName || 'The Sender';
-        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    if (values.senderDisplayName) {
+        formData.append('senderDisplayName', values.senderDisplayName);
+    }
 
-        if (useLinkTemplate) {
-            emailBody = `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Company Logo" width="150" style="border:0; max-width: 100%; margin-bottom: 20px;">
-                    <div style="text-align: left;">
-                        <p>Dear ${recipientName},</p>
-                        <p>I am currently on vacation. I will be back at the publishing house in due time and will instruct you upon my arrival.</p>
-                        <p>Please find attached the PDF document of our last brief, including names and shipment dates and deliveries.</p>
-                        <div style="margin: 20px 0; text-align: center;">
-                            <a href="${values.linkUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
-                                <img src="${PDF_ICON_URL}" alt="PDF Document" width="128" style="border:0; max-width: 100%;">
-                            </a>
-                        </div>
-                        <p>Best regards,</p>
-                        <p><strong>${senderName}</strong></p>
-                        <p><em>${today}</em></p>
-                    </div>
-                </div>
-            `;
-        } else {
-            emailBody = (values.body || '').replace(/\n/g, '<br>');
-        }
-
-        const formData = new FormData();
-        formData.append('senderEmail', values.senderEmail);
-        formData.append('senderPassword', values.senderPassword);
-        formData.append('subject', values.subject);
-        formData.append('body', emailBody);
-        formData.append('recipients', recipientEmail); // Send one recipient at a time
-
-        if (values.senderDisplayName) {
-            formData.append('senderDisplayName', values.senderDisplayName);
-        }
-
-        if (!useLinkTemplate && values.attachment && values.attachment.length > 0) {
-            formData.append('attachment', values.attachment[0]);
-        }
-        
-        try {
-            const response = await fetch(API_ROUTE, {
-                method: "POST",
-                body: formData,
-            });
-
-            const responseData = await response.json();
-
-            if (!response.ok) {
-                throw new Error(responseData.message || `Request failed with status ${response.status}`);
-            }
-            successCount++;
-        } catch (error) {
-            errorCount++;
-            lastErrorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        }
+    // Append template-related fields for the server to process
+    if (values.linkUrl) {
+      formData.append('useLinkTemplate', 'true');
+      formData.append('linkUrl', values.linkUrl);
+    } else {
+      formData.append('body', values.body || '');
+      if (values.attachment && values.attachment.length > 0) {
+        formData.append('attachment', values.attachment[0]);
+      }
     }
     
-    setLoading(false);
+    try {
+        const response = await fetch(API_ROUTE, {
+            method: "POST",
+            body: formData,
+        });
 
-    if (successCount > 0) {
-      toast({
-        title: "Email(s) Sent!",
-        description: `Successfully sent email to ${successCount} of ${recipientList.length} recipient(s).`,
-        className: "bg-green-500 text-white",
-      });
-    }
+        const responseData = await response.json();
 
-    if (errorCount > 0) {
-       toast({
-        variant: "destructive",
-        title: "Some Emails Failed",
-        description: `Failed to send to ${errorCount} recipient(s). Last error: ${lastErrorMessage}`,
-      });
-    }
+        if (!response.ok) {
+            throw new Error(responseData.message || `Request failed with status ${response.status}`);
+        }
 
-    if (errorCount === 0) {
-      form.reset();
+        toast({
+            title: "Email Job Queued!",
+            description: `The server has started sending emails to ${recipientList.length} recipient(s). This may take some time.`,
+            className: "bg-green-500 text-white",
+        });
+        form.reset();
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+            variant: "destructive",
+            title: "Failed to Start Email Job",
+            description: `Error: ${errorMessage}`,
+        });
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -355,5 +317,3 @@ export default function MailCannonForm() {
     </Card>
   );
 }
-
-    
