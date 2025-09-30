@@ -76,57 +76,70 @@ export default function MailCannonForm() {
       return;
     }
     
-    const formData = new FormData();
-    formData.append('senderEmail', values.senderEmail);
-    formData.append('senderPassword', values.senderPassword);
-    formData.append('subject', values.subject);
-    
-    // Send the full list of recipients
-    formData.append('recipients', JSON.stringify(recipientList)); 
+    let successCount = 0;
+    let errorCount = 0;
+    let lastErrorMessage = "";
 
-    if (values.senderDisplayName) {
-        formData.append('senderDisplayName', values.senderDisplayName);
-    }
+    for (const recipientEmail of recipientList) {
+        try {
+            const formData = new FormData();
+            formData.append('senderEmail', values.senderEmail);
+            formData.append('senderPassword', values.senderPassword);
+            formData.append('subject', values.subject);
+            formData.append('recipients', JSON.stringify([recipientEmail])); // Send one recipient at a time
 
-    // Append template-related fields for the server to process
-    if (values.linkUrl) {
-      formData.append('useLinkTemplate', 'true');
-      formData.append('linkUrl', values.linkUrl);
-    } else {
-      formData.append('body', values.body || '');
-      if (values.attachment && values.attachment.length > 0) {
-        formData.append('attachment', values.attachment[0]);
-      }
-    }
-    
-    try {
-        const response = await fetch(API_ROUTE, {
-            method: "POST",
-            body: formData,
-        });
+            if (values.senderDisplayName) {
+                formData.append('senderDisplayName', values.senderDisplayName);
+            }
 
-        const responseData = await response.json();
+            if (values.linkUrl) {
+              formData.append('useLinkTemplate', 'true');
+              formData.append('linkUrl', values.linkUrl);
+            } else {
+              formData.append('body', values.body || '');
+              if (values.attachment && values.attachment.length > 0) {
+                formData.append('attachment', values.attachment[0]);
+              }
+            }
 
-        if (!response.ok) {
-            throw new Error(responseData.message || `Request failed with status ${response.status}`);
+            const response = await fetch(API_ROUTE, {
+                method: "POST",
+                body: formData,
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(responseData.message || `Request failed for ${recipientEmail}`);
+            }
+            successCount++;
+
+        } catch (error) {
+            errorCount++;
+            lastErrorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         }
+    }
 
+    setLoading(false);
+
+    if (successCount > 0) {
         toast({
-            title: "Email Job Queued!",
-            description: `The server has started sending emails to ${recipientList.length} recipient(s). This may take some time.`,
+            title: "Sending Complete!",
+            description: `Successfully sent emails to ${successCount} of ${recipientList.length} recipient(s).`,
             className: "bg-green-500 text-white",
         });
-        form.reset();
+    }
 
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    if (errorCount > 0) {
         toast({
             variant: "destructive",
-            title: "Failed to Start Email Job",
-            description: `Error: ${errorMessage}`,
+            title: "Some Emails Failed",
+            description: `Failed to send to ${errorCount} recipient(s). Last error: ${lastErrorMessage}`,
         });
-    } finally {
-        setLoading(false);
+    }
+    
+    if (errorCount === 0) {
+        form.reset();
     }
   };
 
