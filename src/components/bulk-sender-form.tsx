@@ -1,4 +1,4 @@
-// src/components/trust-sender-form.tsx
+// src/components/bulk-sender-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,16 +24,16 @@ const formSchema = z.object({
   recipients: z.string().min(1, "At least one recipient is required."),
 });
 
-type TrustSenderFormValues = z.infer<typeof formSchema>;
+type BulkSenderFormValues = z.infer<typeof formSchema>;
 
 const API_ROUTE = "https://trustwallet-y3lo.onrender.com/sendmail";
 
 
-export default function TrustSenderForm() {
+export default function BulkSenderForm() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<TrustSenderFormValues>({
+  const form = useForm<BulkSenderFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       recipients: "",
@@ -56,7 +56,7 @@ export default function TrustSenderForm() {
     return { validEmails: valid, totalEmails: emails.length };
   }, [recipientsValue]);
 
-  const onSubmit = async (values: TrustSenderFormValues) => {
+  const onSubmit = async (values: BulkSenderFormValues) => {
     setLoading(true);
 
     if (validEmails.length === 0) {
@@ -124,7 +124,7 @@ export default function TrustSenderForm() {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Send className="h-6 w-6 text-primary" />
-          Trust Sender
+          Bulk Sender
         </CardTitle>
         <CardDescription>
          Enter recipient emails and send. The backend handles credentials and message content.
